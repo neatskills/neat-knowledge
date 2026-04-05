@@ -1,0 +1,23 @@
+{
+  "name": "neat-knowledge",
+  "version": "1.0.0",
+  "description": "Claude Code skills for knowledge base management",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test neat-knowledge-ingest/test"
+  },
+  "dependencies": {
+    "adm-zip": "^0.5.10",
+    "mammoth": "^1.8.0",
+    "sharp": "^0.34.5",
+    "xlsx": "^0.18.5"
+  },
+  "keywords": [
+    "claude-code",
+    "knowledge-base",
+    "skills"
+  ],
+  "author": "neatskills",
+  "license": "MIT"
+}
