@@ -1,0 +1,29 @@
+{
+  "name": "neat-knowledge",
+  "version": "1.0.0",
+  "description": "Knowledge base ingestion with content filtering, security checks, and automatic indexing",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test neat-knowledge-query/test",
+    "test:cache": "node --test neat-knowledge-query/test/kb-cache.test.js",
+    "test:integration": "node --test neat-knowledge-query/test/integration.test.js",
+    "test:all": "node --test neat-knowledge-query/test"
+  },
+  "dependencies": {
+    "@mozilla/readability": "^0.6.0",
+    "adm-zip": "^0.5.10",
+    "jsdom": "^24.0.0",
+    "mammoth": "^1.8.0",
+    "node-xlsx": "^0.24.0",
+    "sharp": "^0.34.5",
+    "turndown": "^7.1.3"
+  },
+  "keywords": [
+    "claude-code",
+    "knowledge-base",
+    "skills"
+  ],
+  "author": "neatskills",
+  "license": "MIT"
+}
