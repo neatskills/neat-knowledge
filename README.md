@@ -63,8 +63,6 @@ Documents can use **embedded** (full content in KB) or **referenced** (content a
 
 All KBs use `.index/index.json` for fast search, `.index/summaries/{category}.json` for detailed metadata, and `metadata.json` for category organization.
 
-**Version 3.0 migration:** Uses per-category summary structure. Existing KBs: re-ingest or run `/neat-knowledge-rebuild` with "Regenerate summaries? y".
-
 See [references/kb-schema.md](references/kb-schema.md), [references/kb-detection.md](references/kb-detection.md),
 and [references/kb-recovery.md](references/kb-recovery.md).
 
