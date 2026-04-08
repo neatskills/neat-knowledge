@@ -1,85 +1,127 @@
-# KB Source Link Recovery Algorithm
+# KB Recovery
 
-## Overview
+Covers KB regeneration and source link recovery.
 
-This algorithm finds moved or renamed files when source links break in Project KB. Both neat-knowledge-query (inline
-recovery) and neat-knowledge-rebuild (batch validation) follow this specification.
+## KB Regeneration
+
+Regenerates indexes when documents exist but indexes need updating or are corrupted.
+
+### When to Regenerate
+
+- Index/metadata corrupted or missing
+- Documents added/modified outside skills
+- Rebuild indexes after manual changes
+
+### Regeneration Process
+
+Regenerates from document content (same as ingest):
+
+**If index.json exists:**
+
+1. Use index as source of truth for document locations
+2. For each document in index:
+   - `storage: "embedded"`: Read from `{KB_PATH}/{file_path}`
+   - `storage: "referenced"`: Read from `source` path (if broken, see Source Link Recovery)
+3. AI analyzes document → extract metadata (title, summary, tags, sections, category)
+4. Write summaries/{category}.json
+5. Write index.json with minimal entries
+6. Write metadata.json with counts
+
+**If index.json missing:**
+
+1. Scan KB for embedded documents: Glob `{KB_PATH}/**/*.md` (exclude `.index/`)
+2. For each embedded document:
+   - Read content
+   - AI analyzes → extract metadata
+   - Write summary, index entry, update counts
+3. Warning: Referenced documents lost (need re-ingestion)
+
+### Auto-Recovery: metadata.json Only
+
+**If only metadata.json missing but index.json exists:**
+
+Auto-recover silently:
+
+1. Regenerate metadata.json from index.json
+2. Count documents, extract categories and tags
+3. Set `source_root` to current working directory
+4. Log: "Recovered metadata.json from index.json"
+5. Continue operation
+
+## Source Link Recovery
+
+Finds moved or renamed files when source links break for referenced documents.
 
 **Triggers:**
 
-- neat-knowledge-query: Read tool fails with ENOENT when loading full documents
-- neat-knowledge-rebuild: After clustering, validate all source links
+- neat-knowledge-query: Read fails with ENOENT loading referenced document
+- neat-knowledge-rebuild: Batch validation of source links
 
-**Tools used:** Glob for filename search, AI reasoning for matching
+**Tools:** Glob for file search, AI reasoning for matching
 
-**Related:** See `neat-knowledge-query/scripts/kb-cache.js` for document caching and conversion
+### Algorithm
 
-## Algorithm Steps
+#### Step 1: Load Source Root
 
-### Step 1: Load Source Root
-
-Read `source_root` from metadata.json to determine where project documents are located:
+Read `source_root` from metadata.json:
 
 ```json
-// metadata.json
 {
-  "kb_type": "project",
   "source_root": "/Users/ji/project/",
   ...
 }
 ```
 
-All source documents should be under this root directory.
+All referenced documents must be under this root.
 
-### Step 2: Get All Available Files
+#### Step 2: Get All Available Files
 
-Use Glob to find all markdown files from source root:
+Glob all supported files from source root:
 
 ```text
-Pattern: source_root/**/*.md
+Pattern: source_root/**/*
+Extensions: .md, .pdf, .docx, .xlsx
 Exclude: node_modules/, .git/, dist/, build/, .next/, out/
 
 Returns: [
   "docs/design/architecture.md",
   "docs/design/system-architecture.md",  // un-ingested
-  "docs/api/endpoints.md",
-  "guides/setup.md",
-  "guides/new-feature.md"  // un-ingested
+  "docs/api/endpoints.pdf",
+  "guides/setup.docx"
 ]
 ```
 
-### Step 3: Identify Un-ingested Files
+#### Step 3: Identify Un-ingested Files
 
-Compare all files against summaries.json to find un-ingested documents:
+Compare against KB index:
 
 ```text
-Known files (from summaries.json source fields):
+Known files (from index.json source fields):
 - docs/design/architecture.md
-- docs/api/endpoints.md
-- guides/setup.md
+- docs/api/endpoints.pdf
 
 Un-ingested files:
 - docs/design/system-architecture.md
-- guides/new-feature.md
+- guides/setup.docx
 ```
 
-### Step 4: AI Reasoning on Filenames
+#### Step 4: AI Reasoning for Matching
 
-When a broken link occurs, use AI to find the best match:
+For broken links, AI finds best match:
 
 **Input to AI:**
 
 - Broken path: `docs/design/architecture.md`
-- KB entry: `{title: "System Architecture", category: "design", key_concepts: [...]}`
+- KB entry: `{title: "System Architecture", category: "design", tags: [...]}`
 - Available files: all files from Step 2
 - Un-ingested files: from Step 3
 
-**AI reasoning considers:**
+**AI considers:**
 
 - Filename similarity (exact → substring → abbreviation)
-- Folder structure (matches category or original parent directory)
-- Title hints (if filename contains title keywords)
-- Un-ingested status (flag as candidate for ingestion)
+- Folder structure (matches category or original parent)
+- Title hints (filename contains title keywords)
+- Un-ingested status (flag as candidate)
 
 **Result types:**
 
@@ -100,75 +142,41 @@ When a broken link occurs, use AI to find the best match:
 {not_found: true}
 ```
 
-## Return Format
+### Handling Results
 
-Recovery algorithm returns one of these result types:
+**Auto-fix (found):**
 
-```javascript
-// Found - moved file
-{found: true, path: "docs/architecture/system-arch.md", status: "moved"}
+- Update summary `source` field with new path
+- Remove `broken_link` flag if present
+- Update index.json entry
+- Log: "Auto-fixed: {title} → {new_path}"
 
-// Found - un-ingested file (candidate for ingestion)
-{found: true, path: "docs/design/system-architecture.md", status: "un-ingested"}
+**User choice (ambiguous):**
 
-// Ambiguous - multiple good candidates
-{
-  ambiguous: true,
-  candidates: [
-    {path: "docs/design/system-architecture.md", status: "un-ingested"},
-    {path: "docs/arch/architecture.md", status: "moved"}
-  ]
-}
-
-// Not found
-{not_found: true}
+```
+Multiple matches for "System Architecture":
+[1] docs/design/system-architecture.md (un-ingested)
+[2] docs/arch/architecture.md (moved)
+Choose [1-2/skip]:
 ```
 
-## Document Loading After Recovery
+Update if chosen, skip if not.
 
-Once a source file is recovered, use `neat-knowledge-query/scripts/kb-cache.js` for efficient loading:
+**Mark broken (not_found):**
 
-**Caching strategy:**
-
-- **.md files:** Read source directly, cache sections only
-- **Office files (.docx, .xlsx):** Convert to markdown, cache both markdown + sections
-- **PDF files:** Convert via Read tool, cache both markdown + sections
-
-**Cache location:** `.cache/` directory next to summaries.json
-
-**Cache invalidation:** Timestamp comparison (source mtime > cache mtime)
-
-**API usage:**
-
-```javascript
-import { loadFullDocument, loadSection } from './neat-knowledge-query/scripts/kb-cache.js';
-
-// Load full document (with caching)
-const markdown = await loadFullDocument(sourcePath, cacheDir);
-
-// Load specific section (with caching)
-const section = await loadSection(sourcePath, "Introduction", cacheDir);
+```
+Source not found for "System Architecture"
+Action:
+[1] Mark as broken (add broken_link flag)
+[2] Provide path manually
+[3] Remove from KB
+[1-3]:
 ```
 
-## Error Handling
+### Document Loading After Recovery
 
-**metadata.json missing or no source_root field:**
+Load content on-demand after recovery:
 
-- Log: "Warning: source_root not configured in metadata.json"
-- Fallback: use project root (cwd) as source_root
-
-**Glob tool fails:**
-
-- Log: "Warning: Failed to search for files: {error}"
-- Return: `{not_found: true}`
-
-**summaries.json fails to load:**
-
-- Log: "Warning: Failed to load summaries.json"
-- Cannot determine known vs un-ingested files
-- Proceed with AI reasoning on all available files
-
-**Cache errors:**
-
-- If cache read/write fails: fall back to direct source reading
-- Log warning but don't block recovery
+- **.md files:** Read directly via Read tool
+- **.pdf files:** Read directly via Read tool (native support)
+- **.docx/.xlsx files:** Convert on-demand: `node scripts/convert-office.js <file-path>`

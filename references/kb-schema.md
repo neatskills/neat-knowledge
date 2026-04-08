@@ -1,26 +1,146 @@
-# Knowledge Schema
+# Knowledge Base Schema
 
-## summaries.json
+Complete data structure and conventions for the knowledge base system.
 
-Located at `./knowledge/.index/summaries.json` (personal KB) or `./docs/knowledge/.index/summaries.json` (project KB)
+## Directory Layout
+
+```text
+./knowledge/  (or ./docs/knowledge/)
+  .index/
+    index.json        # Lightweight search index (~200KB for 1000 docs)
+    summaries/        # Per-category summary files
+      web-development.json
+      architecture.json
+      data-science.json
+      ...
+    metadata.json     # Aggregate statistics and source_root
+  <category>/
+    <document>.md     # Embedded storage documents only
+```
+
+**Example:**
+
+```text
+./docs/knowledge/
+  .index/
+    index.json
+    summaries/
+      web-development.json
+      architecture.json
+      design-doc.json
+    metadata.json     # source_root: "/Users/ji/project/"
+  web-development/
+    react-article.md  # Embedded (from web)
+    screenshot.md     # Embedded (from image)
+  architecture/
+    design-doc.md     # Embedded (user choice)
+    # system-design.pdf lives at source: "docs/system-design.pdf" (referenced)
+```
+
+## Storage Modes
+
+Documents use either storage mode within the same KB:
+
+**Embedded Storage:**
+
+- Full content stored in KB as markdown
+- No `source` field in category summary
+- Used for: web content (always), images (always), local files (user choice)
+- Physical location: `{KB_PATH}/{category}/{filename}.md`
+
+**Referenced Storage:**
+
+- Only summary stored in KB
+- Has `source` field pointing to original file
+- Content loaded on-demand
+- Used for: local files only (PDF, Word, Excel, Markdown)
+- Automatic recovery if source file moves (via neat-knowledge-query or neat-knowledge-rebuild)
+- Optional `broken_link: true` flag if recovery fails
+
+**Source path calculation (referenced storage only):**
+
+```javascript
+// Get KB root and source_root from metadata.json
+const kbRoot = KB_PATH;  // e.g., "/Users/ji/project/docs/knowledge/"
+const sourceRoot = metadata.source_root;  // e.g., "/Users/ji/project/"
+
+// Calculate relative path
+let relativePath;
+if (sourcePath.startsWith(sourceRoot)) {
+  relativePath = path.relative(sourceRoot, sourcePath);
+} else {
+  // Fallback: relative to KB parent directory
+  relativePath = path.relative(path.dirname(kbRoot), sourcePath);
+}
+
+// Store in category summary: "source": "docs/architecture.pdf"
+```
+
+**On-demand loading:**
+
+- Embedded: Read directly from KB
+- Referenced PDF: Read via Read tool (native support)
+- Referenced Word/Excel: Convert via `convert-office.js` on-demand
+- Referenced Markdown: Read directly from source
+
+## Document Format
+
+Markdown file with YAML frontmatter:
+
+```markdown
+---
+title: Document Title
+tags: [tag1, tag2, tag3]
+summary: Brief summary of content
+category: category-name
+---
+
+# Document content in markdown...
+```
+
+## Categories
+
+AI-generated dynamically during ingestion:
+
+- Lowercase with hyphens (e.g., `web-development`, `machine-learning`, `architecture`)
+- Based on content analysis (AI prefers existing categories to prevent proliferation)
+- Dual purpose: semantic classification + physical organization
+- Rebuild maintains categories (merges similar, splits large)
+
+## Tags
+
+AI-generated concepts extracted from content during ingestion:
+
+- 5-10 key concepts (e.g., `["microservices", "api", "authentication"]`)
+- Used for flexible searching and keyword filtering
+
+## Filename Convention
+
+- Sanitized from document title
+- Lowercase, spaces replaced with hyphens
+- Special characters removed
+- Extension: `.md`
+
+Examples:
+
+- "React Hooks Guide" → `react-hooks-guide.md`
+- "AI & Machine Learning" → `ai-machine-learning.md`
+
+## Index Files
+
+### index.json
+
+Located at `{KB_PATH}/.index/index.json`
 
 ```json
 {
   "documents": {
     "filename.md": {
       "title": "Document Title",
-      "summary": "Brief summary...",
-      "key_concepts": ["concept1", "concept2"],
-      "related_topics": ["topic1", "topic2"],
-      "tags": ["tag1", "tag2"],
       "category": "category-name",
+      "tags": ["tag1", "tag2"],
       "file_path": "category/filename.md",
-      "last_modified": "2026-04-05T10:30:00Z",
-      "source": "relative/path/from/KB_PATH/to/original.md",
-      "sections": [
-        {"heading": "Introduction", "preview": "This document covers..."},
-        {"heading": "Architecture", "preview": "The system consists of..."}
-      ]
+      "storage": "embedded"
     }
   }
 }
@@ -28,30 +148,69 @@ Located at `./knowledge/.index/summaries.json` (personal KB) or `./docs/knowledg
 
 **Fields:**
 
-- `documents` - Map of filename to document metadata
-- `title` - Document title (from first heading)
-- `summary` - Brief 2-3 sentence overview
-- `key_concepts` - Array of 3-8 key terms extracted from content
-- `related_topics` - Array of 3-8 related topics
-- `tags` - Array of user-confirmed tags
-- `category` - Lowercase-hyphenated category name
-- `file_path` - Relative path from KB root (for personal KB)
-- `last_modified` - ISO-8601 timestamp of last modification
-- `source` - **Project KB only:** Relative path to original document from KB_PATH. Enables progressive disclosure - KB
-  stores summary, full content at source path. Omitted for personal KB (content stored in KB document).
-- `sections` - Array of document sections with headings and previews: `[{"heading": "Introduction", "preview": "first
-  100 chars..."}]`. Enables progressive section loading without reading full document.
+- `documents` - Map of filename to minimal document metadata
+- `title` - Document title
+- `category` - Lowercase-hyphenated category name (AI-generated)
+- `tags` - Array of 5-10 AI-generated tags
+- `file_path` - Relative path from KB root
+- `storage` - "embedded" (full content in KB) or "referenced" (content at source path)
 
-## Usage Notes
+### summaries/{category}.json
+
+Located at `{KB_PATH}/.index/summaries/{category}.json`
+
+Per-category summary file, loaded on-demand when documents from that category are accessed:
+
+```json
+{
+  "category": "web-development",
+  "documents": {
+    "react-hooks-guide.md": {
+      "title": "React Hooks Guide",
+      "summary": "Brief 2-3 sentence overview...",
+      "tags": ["tag1", "tag2"],
+      "file_path": "web-development/react-hooks-guide.md",
+      "last_modified": "2026-04-05T10:30:00Z",
+      "storage": "embedded",
+      "sections": [
+        {"heading": "Introduction", "preview": "This document covers..."},
+        {"heading": "Architecture", "preview": "The system consists of..."}
+      ]
+    },
+    "nextjs-routing.md": {
+      "title": "Next.js Routing",
+      "summary": "Another summary...",
+      "tags": ["nextjs", "routing"],
+      "file_path": "web-development/nextjs-routing.md",
+      "last_modified": "2026-04-06T14:20:00Z",
+      "storage": "embedded",
+      "sections": [...]
+    }
+  }
+}
+```
+
+**Fields:**
+
+- `category` - Category name (matches filename)
+- `documents` - Object keyed by filename:
+  - `title` - Document title
+  - `summary` - Brief 2-3 sentence overview
+  - `tags` - Array of 5-10 AI-generated tags
+  - `file_path` - Relative path from KB root
+  - `last_modified` - ISO-8601 timestamp
+  - `storage` - "embedded" or "referenced"
+  - `source` - **Referenced storage only:** Relative path to original document. Omitted for embedded storage.
+  - `sections` - Array of sections with headings and previews: `[{"heading": "Introduction", "preview": "first 100 chars..."}]`. Enables progressive section loading.
+
+### Usage Notes
 
 **Loading indexes:**
-Read JSON file directly with fs.readFile:
 
-- Personal KB: `./knowledge/.index/summaries.json`
-- Project KB: `./docs/knowledge/.index/summaries.json`
+- KB index: `./knowledge/.index/index.json` or `./docs/knowledge/.index/index.json`
+- Category summaries: `./knowledge/.index/summaries/{category}.json`
 
 **Empty state:**
-When index doesn't exist, use default empty structure:
 
 ```json
 {
@@ -60,19 +219,24 @@ When index doesn't exist, use default empty structure:
 ```
 
 **Updates:**
-Index file is updated immediately when documents are added via `neat-knowledge-ingest`.
 
-## metadata.json
+- Index file updated when documents added/removed via `neat-knowledge-ingest`
+- Category files updated when documents added/removed/moved via `neat-knowledge-ingest` or `neat-knowledge-rebuild`
+- Load summaries on-demand only when full metadata needed
 
-Located at `./knowledge/.index/metadata.json` (personal KB) or `./docs/knowledge/.index/metadata.json` (project KB)
+**Storage modes:**
 
-**Personal KB Example:**
+- `embedded`: Full content in KB as markdown (web, images, or user choice for local files)
+- `referenced`: Only summary in KB, content loaded on-demand from source (local files only)
+
+### metadata.json
+
+Located at `{KB_PATH}/.index/metadata.json`
 
 ```json
 {
-  "kb_type": "personal",
+  "source_root": "/Users/ji/project/",
   "document_count": 42,
-  "last_updated": "2026-04-04T10:30:00Z",
   "categories": {
     "web-development": 12,
     "backend-architecture": 8,
@@ -86,87 +250,45 @@ Located at `./knowledge/.index/metadata.json` (personal KB) or `./docs/knowledge
 }
 ```
 
-**Project KB Example:**
-
-```json
-{
-  "kb_type": "project",
-  "source_root": "/Users/ji/project/",
-  "document_count": 23,
-  "last_updated": "2026-04-05T14:20:00Z",
-  "categories": {
-    "analysis": 8,
-    "domains": 12,
-    "adrs": 3
-  },
-  "tags": {
-    "nextjs": 5,
-    "api": 8,
-    "architecture": 4
-  }
-}
-```
-
 **Fields:**
 
-- `kb_type` - "project" or "personal" (set during KB creation)
-- `source_root` - **Project KB only:** Absolute path to project root where source documents are located. Used for
-  source link recovery. Example: `/Users/ji/project/`
-- `document_count` - Total number of documents in KB
-- `last_updated` - ISO-8601 timestamp of last index update
-- `categories` - Map of category names to document counts
-- `tags` - Map of tag names to usage counts
+- `source_root` - Absolute path to project root for source link recovery. Example: `/Users/ji/project/`
+- `document_count` - Total documents in KB
+- `categories` - Map of category names to document counts (guides category reuse during ingestion)
+- `tags` - Map of tag names to usage counts (used in rebuild split analysis)
 
-**Updates:** Updated by `neat-knowledge-ingest` each time a document is added.
+**Updates:** Updated by `neat-knowledge-ingest` each time a document is added. Recomputed by `neat-knowledge-rebuild` during category operations.
 
-## clusters.json
+## Atomic Write Pattern
 
-Located at `./knowledge/.index/clusters.json` (both personal and project KB)
+All index file writes use atomic operations to prevent corruption:
 
-```json
-{
-  "clusters": {
-    "web-development": {
-      "name": "web-development",
-      "document_count": 5,
-      "overview": "Documents related to web development..."
-    },
-    "backend-architecture": {
-      "name": "backend-architecture",
-      "document_count": 8,
-      "overview": "Documents about backend system design..."
-    }
-  }
-}
+```javascript
+// For category summary files
+const tempPath = `.index/summaries/.${category}.json.tmp`;
+fs.writeFileSync(tempPath, JSON.stringify(data, null, 2));
+fs.renameSync(tempPath, `.index/summaries/${category}.json`);
+
+// For index.json and metadata.json
+const tempPath = `.index/.${filename}.tmp`;
+fs.writeFileSync(tempPath, JSON.stringify(data));
+fs.renameSync(tempPath, `.index/${filename}`);
 ```
 
-**Fields:**
+**Why atomic writes:**
 
-- `clusters` - Map of cluster name to cluster metadata
-  - `name` - Cluster identifier (lowercase-hyphenated)
-  - `document_count` - Number of documents in this cluster
-  - `overview` - Brief description of cluster theme
+- Rename is atomic on most platforms
+- Prevents partial writes if interrupted
+- Readers always see complete, valid JSON
+- Temp file prefix `.` hides from listings
 
-**Generated by:** `neat-knowledge-rebuild` skill after analyzing document relationships
+**Convention:**
 
-## Individual Cluster Files
+- Category summaries: 2-space indentation for readability
+- index.json and metadata.json: compact (no whitespace) for performance
 
-Located at `./knowledge/.index/clusters/[name].json` (both personal and project KB)
+## Migration Note
 
-```json
-{
-  "cluster_name": "web-development",
-  "overview": "Documents related to web development...",
-  "main_themes": ["React", "JavaScript", "Frontend"],
-  "documents": ["react-hooks.md", "nextjs-routing.md", "css-grid.md"]
-}
-```
+**Breaking change:** This version uses new index structure (index.json + summaries/). No migration provided. Users with existing KBs must re-ingest content.
 
-**Fields:**
-
-- `cluster_name` - Cluster identifier (matches filename)
-- `overview` - Detailed description of cluster theme
-- `main_themes` - Array of key themes/technologies in this cluster
-- `documents` - Array of document filenames belonging to this cluster
-
-**Generation:** Created by `neat-knowledge-rebuild` when documents share 2+ key_concepts or tags
+**Why:** Clean break allows removing backward compatibility code. Project is early-stage, re-ingestion cost is acceptable.

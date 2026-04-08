@@ -9,35 +9,37 @@ export const FILE_EXTENSIONS = {
   EXCEL: ['.xlsx', '.xls']
 };
 
+export const FILE_TYPES = {
+  WORD: 'word',
+  EXCEL: 'excel'
+};
+
 const MAX_ROWS_PER_SHEET = 10_000;
 
-function generateTitleFromFilename(filePath) {
-  const filename = basename(filePath, extname(filePath));
+function generateTitleFromFilename(filename) {
   return filename
     .replace(/[-_]/g, ' ')
     .replace(/\b\w/g, char => char.toUpperCase());
 }
 
+function createConversionResult(markdown, warnings = []) {
+  return { markdown, warnings };
+}
+
 export async function convertWordToMarkdown(filePath) {
   const result = await mammoth.convertToMarkdown({ path: filePath });
-  return {
-    markdown: result.value,
-    warnings: result.messages
-  };
+  return createConversionResult(result.value, result.messages);
 }
 
 function formatTableRow(cells) {
   return `| ${cells.join(' | ')} |\n`;
 }
 
-function formatSheetAsMarkdown(sheet, index, hasMultipleSheets) {
+function formatSheetAsMarkdown(sheet, shouldShowHeader) {
   const parts = [];
 
-  if (hasMultipleSheets && index > 0) {
-    parts.push('\n\n');
-  }
-  if (hasMultipleSheets) {
-    parts.push(`## ${sheet.name}\n\n`);
+  if (shouldShowHeader) {
+    parts.push(`\n\n## ${sheet.name}\n\n`);
   }
 
   const data = sheet.data;
@@ -70,25 +72,26 @@ export async function convertExcelToMarkdown(filePath) {
   const hasMultipleSheets = sheets.length > 1;
 
   const markdown = sheets.map((sheet, index) =>
-    formatSheetAsMarkdown(sheet, index, hasMultipleSheets)
+    formatSheetAsMarkdown(sheet, hasMultipleSheets && index > 0)
   ).join('');
 
-  return { markdown, warnings: [] };
+  return createConversionResult(markdown);
 }
 
 export async function convertOfficeFile(filePath) {
   const ext = extname(filePath).toLowerCase();
-  const title = generateTitleFromFilename(filePath);
+  const filename = basename(filePath, ext);
+  const title = generateTitleFromFilename(filename);
 
   let result;
   let fileType;
 
   if (FILE_EXTENSIONS.WORD.includes(ext)) {
     result = await convertWordToMarkdown(filePath);
-    fileType = 'word';
+    fileType = FILE_TYPES.WORD;
   } else if (FILE_EXTENSIONS.EXCEL.includes(ext)) {
     result = await convertExcelToMarkdown(filePath);
-    fileType = 'excel';
+    fileType = FILE_TYPES.EXCEL;
   } else {
     throw new Error(`Unsupported file type: ${ext}`);
   }

@@ -4,6 +4,7 @@ import { JSDOM } from 'jsdom';
 import TurndownService from 'turndown';
 
 const MAX_RESPONSE_SIZE = 10_000_000;
+const MIN_HTML_LENGTH = 100;
 const EXCERPT_MAX_LENGTH = 200;
 const USER_AGENT = 'Mozilla/5.0 (compatible; NeatKnowledge/1.0)';
 
@@ -30,7 +31,7 @@ export async function fetchWebContent(url) {
 
   const contentLength = response.headers.get('content-length');
   if (contentLength && Number(contentLength) > MAX_RESPONSE_SIZE) {
-    throw new Error(`Response too large (${contentLength} bytes, max: ${MAX_RESPONSE_SIZE})`);
+    throw new Error(`Response size ${contentLength} bytes exceeds limit of ${MAX_RESPONSE_SIZE} bytes`);
   }
 
   let totalSize = 0;
@@ -45,17 +46,20 @@ export async function fetchWebContent(url) {
 
       totalSize += value.length;
       if (totalSize > MAX_RESPONSE_SIZE) {
-        throw new Error(`Response exceeded ${MAX_RESPONSE_SIZE} bytes`);
+        throw new Error(`Response size ${totalSize} bytes exceeds limit of ${MAX_RESPONSE_SIZE} bytes`);
       }
 
       chunks.push(decoder.decode(value, { stream: true }));
     }
-    chunks.push(decoder.decode());
   } finally {
     streamReader.releaseLock();
   }
 
   const html = chunks.join('');
+
+  if (!html || html.length < MIN_HTML_LENGTH) {
+    throw new Error('Response body too small or empty');
+  }
 
   const dom = new JSDOM(html, { url });
 
@@ -79,13 +83,13 @@ export async function fetchWebContent(url) {
       const bodyElement = document.querySelector('body');
       const textContent = bodyElement?.textContent || '';
 
-      markdown = textContent
+      const lines = textContent
         .split('\n')
         .map(line => line.trim())
-        .filter(line => line.length > 0)
-        .join('\n\n');
+        .filter(line => line.length > 0);
 
-      excerpt = markdown.substring(0, EXCERPT_MAX_LENGTH);
+      excerpt = lines.slice(0, 3).join(' ').substring(0, EXCERPT_MAX_LENGTH);
+      markdown = lines.join('\n\n');
     }
 
     return {

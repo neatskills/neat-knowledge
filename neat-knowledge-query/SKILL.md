@@ -17,25 +17,19 @@ Search, research, and extract from knowledge base.
 - `/neat-knowledge-query ask <question>` - Research with synthesis
 - `/neat-knowledge-query extract <source> <options>` - Structured data extraction
 
-**Clusters:** After `/neat-knowledge-rebuild`, clusters group related docs by theme for browsing. All modes query
-summaries.json directly.
-
 ## KB Detection
 
-**Personal KB:** Content in KB documents, no source field.
+Follow [KB Detection](../references/kb-detection.md). Store KB path.
 
-**Project KB:** Content at original paths, summaries have source field. Progressive disclosure.
+**Storage modes:** Documents use embedded (content in KB) or referenced (content at source path). Check `storage` field in `.index/summaries/{category}.json`.
 
-Follow [KB Detection](../references/kb-detection.md). Store path and KB type.
+**References:** Shared across neat-knowledge skills at `references/kb-*.md`
 
 ## When to Use
 
-- Find documents by keyword, topic, tag
+- Find documents by category, keyword, tag
 - Research requiring multi-source synthesis
 - Interactive exploration with follow-ups
-- Understand connections between documents
-
-After adding 10+ documents, run `/neat-knowledge-rebuild` to cluster by theme.
 
 ## Quick Reference
 
@@ -63,50 +57,51 @@ If KB missing/empty: inform user, suggest `/neat-knowledge-ingest`
 
 If query empty: show usage, return.
 
-Detect KB path. Load summaries.json (error if missing/corrupt/empty).
+Detect KB path. Load index.json (error if missing/corrupt/empty).
+
+**Modes:**
+
+- **User mode** (default): Formatted text output
+- **Internal mode** (Ask/Extract): Structured data `{results: [{filename, title, summary, category, tags, score}], total_candidates: N, total_returned: N}`
 
 **Pipeline:**
 
 ### Stage 1: Keyword Filter
 
 1. Calculate adaptive cap: `max(20, min(50, KB_size × 0.1))`
-2. Filter by keyword (case-insensitive in title/summary/tags/key_concepts)
-3. Sort by relevance (matching field count)
-4. Take top N where N = min(cap, total_matches)
-5. If no matches: show "No matches for '{query}'. Try: broader keywords, check spelling, search by category/tag", return
+2. Filter by keyword (case-insensitive in title/category/tags), support `category:name` syntax
+3. Sort by relevance (matching field count), take top N where N = min(cap, total_matches)
+4. If no matches: show "No matches for '{query}'. Try: broader keywords, check spelling, use category: filter", return
 
 ### Stage 2: AI Ranking
 
-1. Prepare candidates (filename, title, summary, key_concepts, tags)
-2. Spawn subagent (description: "Rank search results by relevance") to score 0.0-1.0, return compact JSON with
-   filename and score
-3. Parse JSON (malformed if: not array, missing fields, invalid score range)
-4. If subagent fails:
-   - Log: "Warning: AI ranking unavailable, falling back to keyword search"
-   - Use keyword-sorted candidates, skip Stage 3, return top 10 directly
+1. Group candidates by category
+2. Load `.index/summaries/{category}.json` for each unique category
+   - If missing/corrupt: log "Skipping category {category}, summary file not found", remove those documents
+3. Extract document summaries
+   - If document missing: log "Skipping {filename}, not found in category summary", remove from candidates
+4. Spawn subagent (description: "Rank search results by relevance") to score 0.0-1.0, return compact JSON with filename and score
+5. Parse JSON (malformed if: not array, missing fields, invalid score range)
+6. If subagent fails: log "Warning: AI ranking unavailable, falling back to keyword search", use keyword-sorted candidates, skip Stage 3, return top 10
 
 ### Stage 3: Filter and Return
 
-1. Sort by score descending
-2. Filter scores < 0.5
-3. If none ≥ 0.5:
-   - Show: "Found {N} matches but none highly relevant (all < 0.5). Try: specific query, different keywords, browse by category"
-   - Return
-4. Take top 10
-5. Format: `[{filename}] {title} (category) [score: {score}] - {summary_snippet}... [tags]`
-6. Show: "Found {total_matches} matches (showing {returned_count}, AI-ranked)"
+1. Sort by score descending, filter scores < 0.5
+2. If none ≥ 0.5: show "Found {N} matches but none highly relevant (all < 0.5). Try: specific query, different keywords, category: filter", return
+3. Take top 10
+4. **User mode:** Format: `[{filename}] {title} (category) [score: {score}] - {first 150 chars}... [tags]`, show "Found {total_candidates} candidates ({total_returned} relevant, AI-ranked)"
+5. **Internal mode:** Return structured data
 
 ## Command: Ask (Interactive Research)
 
 **Usage:** `/neat-knowledge-query ask <question>`
 
-Detect KB path. Load summaries.json (error if missing/corrupt/empty). Initialize: `turns: []`, `all_sources: []`
+Detect KB path. Load index.json (error if missing/corrupt/empty). Initialize: `turns: []`, `all_sources: []`
 
 **Loop:**
 
-1. **Search:** Call Search internally, get top 10 AI-ranked docs
-2. **Progressive Load:** Use summaries.json metadata. If details needed: load 2-4 most relevant full docs via
-   `<skill-dir>/scripts/kb-cache.js` (automatic caching for Project KB)
+1. **Search:** Call Search in internal mode, get top 10 AI-ranked docs
+2. **Progressive Load:** Use summary metadata. If details needed: load 2-4 most relevant full docs on-demand
 3. **Synthesize:** Build prompt with turns, question, docs, instructions (cite, note conflicts, format clearly)
 4. **Execute:** Claude call
 5. **Display:** Show answer
@@ -122,8 +117,6 @@ Detect KB path. Load summaries.json (error if missing/corrupt/empty). Initialize
 
 Skill-to-skill calls, returns structured JSON.
 
-**Query:** Natural language, cluster, category, tag, or filename
-
 **Options:**
 
 - `--summary-only` - Summaries only (80% token savings)
@@ -132,111 +125,85 @@ Skill-to-skill calls, returns structured JSON.
 
 ### Extract Algorithm
 
-**Step 1: Load** - Detect KB, load summaries.json, log count.
+**Step 1: Load** - Detect KB, load index.json.
 
-**Step 2: Search** - Call Search, use `--score-threshold` (default: 0.5), return docs with score ≥ threshold.
+**Step 2: Search** - Call Search in internal mode with `--score-threshold` (default: 0.5).
 
 **Step 3: Load Content** - Per matched doc:
 
-- `--summary-only`: use summaries.json summary
-- `--sections`: load from cache via `<skill-dir>/scripts/kb-cache.js loadSection()` (summaries.json has 100-char previews
-  only)
-- Otherwise: load full docs via `<skill-dir>/scripts/kb-cache.js loadFullDocument()` (Project KB: read source with caching and
-  recovery, Personal KB: embedded)
+- `--summary-only`: Load `.index/summaries/{category}.json`, extract summary field
+- `--sections`: Load `.index/summaries/{category}.json`, extract sections (100-char previews)
+- Otherwise: Load full docs (Embedded: read from KB, Referenced: read/convert from source)
+  - Load `.index/summaries/{category}.json` to get file_path and storage mode
 
-**Caching (Project KB only):**
+If category file missing/corrupt: log warning, skip those documents.
 
-- `.md` files: Read source directly, cache sections only
-- Office/PDF files: Cache converted markdown + sections
-- Timestamp-based invalidation (auto-regenerates if source newer)
-- Cache location: `.index/.cache/` directory
+**Loading by file type:**
 
-**Project KB loading with recovery:**
+- `.md` files: Read via Read tool
+- PDF files: Read via Read tool
+- Office files (.docx, .xlsx): `node scripts/convert-office.js <file-path>`
 
-Query uses interactive inline recovery (user confirms each decision immediately during extraction).
+**Referenced storage loading:**
 
 Per document with `source`:
 
-1. Attempt load via `<skill-dir>/scripts/kb-cache.js loadFullDocument(source, cacheDir)`
-2. If succeeds: use cached/converted content
-3. If fails (ENOENT):
-   - Check `broken_link: true` → if yes: skip, log "Skipping {filename} (marked broken)"
-   - Log: "Source not found at {source}, attempting recovery..."
-   - Follow [KB Recovery](../references/kb-recovery.md): Glob all files in source_root, AI reasoning on filenames
-   - Handle by type (query confirms; rebuild auto-fixes):
-     - **found (moved/un-ingested)**: Ask "Found at {newPath} (status: {status}). Update? (y/n)" → yes: update
-       source, remove broken_link, update last_modified, load via cache; no: skip
-     - **ambiguous**: Show list → "Which? [1-N/skip]" → if chosen: update, load via cache; skip: skip
-     - **not_found**: Ask "Provide path or skip? [path/skip]" → path: validate, update, load via cache; skip: skip
-4. If updated: load summaries.json, modify, write atomically
-5. Continue remaining docs
+1. Check if `broken_link: true`: log "Skipping {filename} (marked broken)", track in broken_links, skip
+2. Attempt load from source
+3. If succeeds: use content
+4. If fails (ENOENT): log "Skipping {filename} - source not found at {source}", track in broken_links, skip
 
-**Note:** After recovery, document loading uses caching automatically (see [KB Caching](../references/kb-caching.md))
+**At end:** If broken links found:
 
-**Errors:**
-
-- Glob fails: log, ask manual path
-- Invalid path: validate, "Not found, retry or skip? [path/skip]"
-- Unwritable: show error, skip doc (don't abort)
+```
+Warning: {N} document(s) have broken source links.
+Run /neat-knowledge-rebuild to repair all broken links.
+```
 
 **Step 4: Output** - Compact JSON:
 
 ```json
 {
   "documents": [
-    {"title": "...", "summary": "...", "category": "...", "tags": [...], "key_concepts": [...], "content": "..."}
+    {
+      "filename": "example.md",
+      "title": "...",
+      "summary": "...",
+      "category": "...",
+      "tags": [...],
+      "score": 0.85,
+      "storage": "embedded",
+      "content": "..."
+    }
   ],
   "total": 3
 }
 ```
 
-**Key fields:** documents, filename, title, summary, category, tags, score (0.0-1.0), source (Project KB only),
-content, sections, metadata
+**Key fields:**
 
-**Project KB:** Summaries in KB, content at source paths, has source field. **Personal KB:** Full content in KB, no
-source field. Both: section extraction via subagents.
+- `filename` - Document filename
+- `title` - Document title
+- `summary` - Brief summary
+- `category` - Document category
+- `tags` - Array of tags
+- `score` - Relevance score (0.0-1.0)
+- `storage` - "embedded" or "referenced"
+- `source` - (Referenced only) Source path
+- `content` - Full content or summary
+- `sections` - (If `--sections` used) Specific sections
+- `total` - Total documents returned
 
-## Cache Management (Project KB Only)
-
-**Cache location:** `.index/.cache/` directory
-
-**Automatic cache invalidation:** Cache regenerates when source files are modified (timestamp comparison)
-
-**Manual cache operations:**
-
-```javascript
-import { clearCache } from '..<skill-dir>/scripts/kb-cache.js';
-
-// Clear all cache
-clearCache(cacheDir);
-
-// Clear specific file cache
-clearCache(cacheDir, sourcePath);
-```
-
-**When to clear cache:**
-
-- Source files corrupted or converted incorrectly
-- Testing/debugging document loading
-- Freeing disk space (cache auto-regenerates)
-
-**Troubleshooting:**
-
-- "Cache read failed": Falls back to direct source reading, logs warning
-- "Conversion failed": Fix source file format or encoding
-- Stale cache: Check file timestamps, cache should auto-regenerate
-
-See [KB Caching](../references/kb-caching.md) for architecture details.
+**Embedded storage:** Full content in KB, no source field. **Referenced storage:** Summaries in KB, content at source paths, has source field.
 
 ## Common Mistakes
 
 - Not checking KB exists before queries
 - Not handling empty results
 - Loading full docs when summaries suffice
-- Forgetting to deduplicate sources
-- Expecting clusters to affect search (uses summaries.json)
+- Forgetting to deduplicate sources in Ask mode
 - Not handling AI ranking failures (check errors, fall back to keyword)
 - Passing too many candidates (use adaptive cap)
-- Requesting all sections when only need specific
-- Not using `--summary-only` when appropriate
-- Not using `--sections` for targeted extraction
+- Not using `--summary-only` or `--sections` when appropriate
+- Using user-mode Search output when Ask/Extract need internal mode
+- Not checking `broken_link: true` before attempting load

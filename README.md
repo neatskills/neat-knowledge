@@ -3,22 +3,22 @@
 Pure markdown knowledge base for any agent. 80-90% context savings through progressive disclosure: load summaries
 first, extract sections on demand.
 
-Ingest web pages, PDFs, Office docs, ZIP archives, images, and text into searchable markdown with AI-generated
-summaries and two-layer security checks.
+Ingest web pages, PDFs, Office docs, images, and text into searchable markdown with AI-generated summaries and
+two-layer security checks.
 
 ## Features
 
 **Progressive Disclosure** - Summaries first (~1-3K tokens), sections on demand, source references  
-**Three Query Modes** - Search (AI-ranked), Ask (deep research), Extract (structured JSON)  
-**Universal Ingest** - Web, PDF, Word, Excel, ZIP, images, text with security scanning  
-**Two KB Types** - Personal (full content) or Project (source references)  
-**AI Clustering** - Group related docs by theme (10+ documents)
+**Three Query Modes** - Search (AI-ranked), Ask (deep research), Extract (structured JSON for automation)  
+**Universal Ingest** - Web, PDF, Word, Excel, images, text with security scanning  
+**Two Storage Modes** - Embedded (full content) or Referenced (on-demand loading)  
+**Category Optimization** - AI analyzes all documents to optimize category structure, validates source links
 
 ## Skills
 
 - **neat-knowledge-ingest** - Convert content to markdown with security checks, auto-index
-- **neat-knowledge-query** - Search, ask questions, or extract structured data
-- **neat-knowledge-rebuild** - Cluster documents by shared themes (run after 10+ docs)
+- **neat-knowledge-query** - Search, ask questions, extract data, or browse categories
+- **neat-knowledge-rebuild** - Optimize categories via AI analysis, regenerate indexes, validate sources
 
 ## Install
 
@@ -41,36 +41,39 @@ To uninstall:
 # Ingest content
 /neat-knowledge-ingest https://example.com/article
 /neat-knowledge-ingest ~/Downloads/document.pdf
-/neat-knowledge-ingest ~/Downloads/files.zip  # Batch processing
+/neat-knowledge-ingest ~/Downloads/documents/  # Batch processing (directory)
 
 # Query
 /neat-knowledge-query search "keyword"                          # Fast AI-ranked search
 /neat-knowledge-query ask "research question"                   # Deep research mode
-/neat-knowledge-query extract "auth" --sections Introduction    # Structured JSON
-/neat-knowledge-query extract "security" --summary-only         # Summaries only
+/neat-knowledge-query extract "auth" --sections Introduction    # Structured JSON (automation)
+/neat-knowledge-query extract "security" --summary-only         # Summaries only (automation)
 
-# Cluster (after 10+ docs)
+# Optimize categories (periodic maintenance)
 /neat-knowledge-rebuild
 ```
 
-## KB Types
+## Storage Modes
 
-**Personal KB** (`./knowledge/`) - Full content stored in KB  
-**Project KB** (`./docs/*/`) - Summaries in `.index/`, content at source paths. Automatic recovery if source files
-are moved or renamed. Efficient caching for non-markdown sources (PDF, Word, Excel).
+Documents can use **embedded** (full content in KB) or **referenced** (content at source path, loaded on-demand) storage.
 
-Both use `.index/summaries.json` for search and `.index/clusters/` for thematic grouping.
+- **Embedded**: Web content, images, or user choice for local files - full content stored as markdown in KB
+- **Referenced**: Local files only - summaries in KB, content loaded on-demand from source path
+- **Automatic recovery** if source files are moved or renamed (referenced storage only)
 
-See [references/kb-structure.md](references/kb-structure.md), [references/kb-schema.md](references/kb-schema.md),
-[references/kb-caching.md](references/kb-caching.md), and [references/kb-recovery.md](references/kb-recovery.md).
+All KBs use `.index/index.json` for fast search, `.index/summaries/{category}.json` for detailed metadata, and `metadata.json` for category organization.
+
+**Version 3.0 migration:** Uses per-category summary structure. Existing KBs: re-ingest or run `/neat-knowledge-rebuild` with "Regenerate summaries? y".
+
+See [references/kb-schema.md](references/kb-schema.md), [references/kb-detection.md](references/kb-detection.md),
+and [references/kb-recovery.md](references/kb-recovery.md).
 
 ## Security & Limitations
 
 **Two-layer security:** Filename patterns + content scanning for API keys, passwords, credentials  
 **No known vulnerabilities** - See [SECURITY.md](SECURITY.md)
 
-**Limits:** Static HTML only (no JS-heavy SPAs), .docx only (no legacy .doc), nested ZIP skipped, complex images may
-extract poorly
+**Limits:** Static HTML only (no JS-heavy SPAs), .docx only (no legacy .doc), complex images may extract poorly
 
 ## License
 
