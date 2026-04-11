@@ -113,72 +113,34 @@ Follow [KB Schema](../references/kb-schema.md).
 
 ### Step 3: Analyze KB Content
 
+**Internal processing - do not display data structures to user.**
+
 1. Load index.json and all summaries/*.json
-2. Build content analysis:
-
-   ```javascript
-   {
-     document_count: 150,
-     current_categories: {
-       "web-dev": 5,
-       "web-development": 12,
-       "frontend": 8,
-       "development": 100,
-       "react": 40
-     },
-     top_tags: {
-       "react": 45,
-       "nodejs": 30,
-       "python": 25,
-       "api": 40,
-       "typescript": 35
-     },
-     documents: [
-       {
-         title: "React Hooks Guide",
-         current_category: "web-development",
-         tags: ["react", "javascript", "hooks"],
-         summary: "...",
-         filename: "react-hooks-guide.md"
-       },
-       // ... all docs
-     ]
-   }
-   ```
-
-3. Log: "Analyzing {count} documents across {cat_count} categories..."
+2. Build internal content analysis structure with: document_count, current_categories (with counts), top_tags (with counts), and all documents with their metadata
+3. Log to user: "Analyzing {count} documents across {cat_count} categories..."
 
 ### Step 4: Design Category Structure
 
 AI designs optimal categories by analyzing all documents.
 
-**Prompt AI:**
+**IMPORTANT:** This step generates internal JSON for processing. Do NOT display the full JSON to the user. Only show "Analyzing..." status, then proceed to Step 5 with the user-friendly summary.
 
-```
-You are analyzing a knowledge base to design an optimal category structure.
+**Internal Analysis:**
 
-CURRENT STATE:
+Generate category optimization plan by analyzing:
 - {document_count} documents
 - {current_category_count} current categories: {list with counts}
 - Top tags: {top 20 tags with counts}
+- All documents with: title, current_category, tags, summary preview
 
-SAMPLE DOCUMENTS (5-10 representative):
-- Title: {title}
-  Current category: {category}
-  Tags: {tags}
-  Summary: {first 100 chars}
-
-FULL DOCUMENT LIST:
-{All documents with: title, current_category, tags, summary preview}
-
-TASK:
-Design better category structure. Consider:
+Design better category structure considering:
 1. Natural topic clusters
 2. Current categories too granular or broad
 3. User discoverability
 4. Aim for 5-15 categories (fewer is better)
 
-Return JSON:
+**Internal JSON structure:**
+```json
 {
   "proposed_categories": [
     {
@@ -196,11 +158,18 @@ Return JSON:
     "react-hooks-guide.md": {
       "new_category": "web-development",
       "reasoning": "React content fits web development"
-    },
-    // ... all documents
+    }
   }
 }
 ```
+
+**User-facing output for this step:**
+
+```
+Analyzing 150 documents across 8 categories...
+```
+
+Then proceed directly to Step 5 to show the formatted plan.
 
 ### Step 5: Show Optimization Plan and Confirm
 
