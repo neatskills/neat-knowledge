@@ -4,13 +4,13 @@ Covers KB regeneration and source link recovery.
 
 ## KB Regeneration
 
-Regenerates indexes when documents exist but indexes need updating or are corrupted.
+Regenerates index files when documents exist but index files need updating or are corrupted.
 
 ### When to Regenerate
 
-- Index/metadata corrupted or missing
+- Index files (index.json, metadata.json, summaries) corrupted or missing
 - Documents added/modified outside skills
-- Rebuild indexes after manual changes
+- Rebuild index files after manual changes
 
 ### Regeneration Process
 
@@ -38,15 +38,21 @@ Regenerates from document content (same as ingest):
 
 ### Auto-Recovery: metadata.json Only
 
-**If only metadata.json missing but index.json exists:**
+**When:** Only metadata.json is missing, but index.json and summaries exist and are valid
 
-Auto-recover silently:
+**Behavior:** Silent auto-recovery (no user prompt)
+
+**Why silent:** metadata.json is derivative data that can be reliably reconstructed from index.json without data loss
+
+**Process:**
 
 1. Regenerate metadata.json from index.json
 2. Count documents, extract categories and tags
 3. Set `source_root` to current working directory
 4. Log: "Recovered metadata.json from index.json"
 5. Continue operation
+
+**Note:** Full index regeneration (when index.json or summaries missing/corrupt) always requires user confirmation via `/neat-knowledge-rebuild` to avoid unintended data loss
 
 ## Source Link Recovery
 

@@ -172,6 +172,14 @@ Per-category summary file, loaded on-demand when documents from that category ar
       "file_path": "web-development/react-hooks-guide.md",
       "last_modified": "2026-04-05T10:30:00Z",
       "storage": "embedded",
+      "tokens": {
+        "summary": 150,
+        "full": 3500,
+        "sections": {
+          "Introduction": 200,
+          "Architecture": 800
+        }
+      },
       "sections": [
         {"heading": "Introduction", "preview": "This document covers..."},
         {"heading": "Architecture", "preview": "The system consists of..."}
@@ -184,6 +192,15 @@ Per-category summary file, loaded on-demand when documents from that category ar
       "file_path": "web-development/nextjs-routing.md",
       "last_modified": "2026-04-06T14:20:00Z",
       "storage": "embedded",
+      "tokens": {
+        "summary": 180,
+        "full": 4200,
+        "sections": {
+          "Overview": 150,
+          "Dynamic Routes": 600,
+          "API Routes": 500
+        }
+      },
       "sections": [...]
     }
   }
@@ -200,12 +217,16 @@ Per-category summary file, loaded on-demand when documents from that category ar
   - `file_path` - Relative path from KB root
   - `last_modified` - ISO-8601 timestamp
   - `storage` - "embedded" or "referenced"
+  - `tokens` - Token count estimates for ROI decisions:
+    - `summary` - Tokens in summary field
+    - `full` - Tokens in full document
+    - `sections` - Object mapping section headings to token counts
   - `source` - **Referenced storage only:** Relative path to original document. Omitted for embedded storage.
   - `sections` - Array of sections with headings and previews: `[{"heading": "Introduction", "preview": "first 100 chars..."}]`. Enables progressive section loading.
 
 ### Usage Notes
 
-**Loading indexes:**
+**Loading index files:**
 
 - KB index: `./knowledge/.index/index.json` or `./docs/knowledge/.index/index.json`
 - Category summaries: `./knowledge/.index/summaries/{category}.json`
@@ -286,6 +307,33 @@ fs.renameSync(tempPath, `.index/${filename}`);
 
 - Category summaries: 2-space indentation for readability
 - index.json and metadata.json: compact (no whitespace) for performance
+
+## Common Procedures
+
+### Loading Category Summary Files
+
+**When:** Loading category summaries for document metadata access
+
+**Standard procedure:**
+
+1. Load `.index/summaries/{category}.json`
+2. **If missing/corrupt:**
+   - Log: "Warning: Category summary file {category}.json missing or corrupt, skipping {N} documents from this category"
+   - Skip documents from this category (don't fail operation)
+   - Continue with other categories
+3. **If valid:** Extract document metadata from documents object
+
+**Error handling:**
+
+- Missing file: Skip category, continue operation
+- Corrupt JSON (parse error): Skip category, continue operation  
+- Missing documents field: Skip category, continue operation
+
+**Usage notes:**
+
+- Non-blocking: Missing category files don't fail the operation
+- Graceful degradation: Skip affected documents, process others
+- User awareness: Always log warnings for missing files
 
 ## Migration Note
 
