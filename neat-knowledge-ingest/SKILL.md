@@ -241,7 +241,7 @@ category: {category}
 {markdown_content}
 ```
 
-Bash: `node scripts/count-tokens.js /tmp/temp-doc-{timestamp}.md`
+Bash: `node <skill-dir>/scripts/count-tokens.js /tmp/temp-doc-{timestamp}.md`
 
 Parse JSON:
 
