@@ -35,7 +35,7 @@ Referenced documents store only summary in KB, content at source path.
 **File type handling:**
 - `.md` - Read tool directly
 - `.pdf` - Read tool (native PDF support)
-- `.docx`, `.xlsx` - Convert via `node scripts/convert-office.js <path>`
+- `.docx`, `.xlsx` - Convert via `<skill-dir>/scripts/convert-office.js <path>`
 
 **Example:**
 ```
@@ -100,7 +100,7 @@ contentCache = {
 
 **Cache rules:**
 - Cache per document, not per query
-- Cache persists across conversation turns (ask mode)
+- Cache persists across conversation turns within a single session
 - Check cache before loading
 - Summaries already in category summary files (no separate cache needed)
 
@@ -112,17 +112,20 @@ Three loading depths based on agent evaluation:
 - Already loaded from category summary file
 - No additional file reads needed
 - Fastest, lowest token cost
+- Token estimate from `tokens.summary` in category summary file
 
 **Sections** (~500-1000 tokens per section):
 - Load full document
 - Extract requested sections by heading
 - Cache for future use
 - Medium token cost
+- Token estimate from `tokens.sections` in category summary file
 
 **Full** (~3000-8000 tokens):
 - Load entire document
 - Highest token cost
 - Use when deep context needed
+- Token estimate from `tokens.full` in category summary file
 
 **Loading order:**
 1. Summaries (free, already loaded)
