@@ -1,37 +1,32 @@
 # KB Detection
 
-Check convention paths in order for `.index/index.json`:
-
-1. `./docs/knowledge/`
-2. `./knowledge/`
-3. `./`
-
-**If multiple found:**
-
-Show list with document counts from each `metadata.json`:
+Ask user for KB location:
 
 ```
-Multiple KBs found. Choose:
-[1] ./docs/knowledge/ (45 documents)
-[2] ./knowledge/ (12 documents)
-[1-2]:
+Enter knowledge base path (e.g., ./knowledge/ or ./docs/kb/):
 ```
 
-Use selected KB path.
+**If path exists and contains `.index/index.json`:**
 
-**If none found:**
-
-Prompt to create new KB:
+Load existing KB. Show confirmation:
 
 ```
-Create KB at:
-[1] ./docs/knowledge/
-[2] ./knowledge/
-[1-2]:
+Using existing KB at {path} ({count} documents)
 ```
 
-At chosen location, create:
+Store path as `KB_PATH`.
 
+**If path does not exist or missing `.index/` structure:**
+
+Confirm KB creation:
+
+```
+No KB found at {path}. Create new KB here? [y/n]:
+```
+
+If yes, create:
+
+- Directory if missing
 - `.index/` directory
 - `.index/summaries/` directory (stores per-category summary files)
 - `.index/metadata.json` (see [KB Schema](kb-schema.md) for structure)
@@ -49,4 +44,4 @@ Initialize metadata.json:
 
 `source_root`: Absolute path where source documents are located (usually project root). Used for source link recovery when documents use referenced storage. Example: `/Users/ji/project/`
 
-Store detected path as `KB_PATH` for all operations.
+Store path as `KB_PATH` for all operations.
