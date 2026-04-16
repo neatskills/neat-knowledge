@@ -44,6 +44,8 @@ Initialize conversation state:
 
 Call `/neat-knowledge-search` in internal mode with the question.
 
+Internal mode: return structured JSON instead of formatted text.
+
 Returns all keyword matches with metadata (summary, category, tags, tokens, sections, storage, file_path).
 
 Store results for agent evaluation.
@@ -51,6 +53,8 @@ Store results for agent evaluation.
 ### Step 2: Agent Evaluation
 
 Follow [KB Evaluation](../references/kb-evaluation.md) framework.
+
+Note: You (the executing agent) perform this evaluation.
 
 Present search results to agent with two-part evaluation prompt:
 
@@ -139,7 +143,7 @@ Instructions:
 - Don't add information not in sources
 ```
 
-Spawn subagent with prompt: "Synthesize answer from knowledge base"
+Spawn subagent using Agent tool: "Synthesize answer from knowledge base"
 
 Wait for subagent response.
 
@@ -171,7 +175,7 @@ Ask: "Continue? (y/n or ask follow-up question)"
 
 - `n` or `no`: 
   - If 3+ turns: "Save conversation? (y/n)"
-    - If yes: Save to `docs/knowledge/conversations/{timestamp}.md`
+    - If yes: Create directory if needed, save to `docs/knowledge/conversations/{timestamp}.md` (format: YYYY-MM-DD-HHmmss)
   - Exit loop
 
 - `y` or `yes`:
