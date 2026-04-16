@@ -54,7 +54,7 @@ Documents use either storage mode within the same KB:
 - Has `source` field pointing to original file
 - Content loaded on-demand
 - Used for: local files only (PDF, Word, Excel, Markdown)
-- Automatic recovery if source file moves (via neat-knowledge-query or neat-knowledge-rebuild)
+- Automatic recovery if source file moves (via neat-knowledge-ask, neat-knowledge-extract, or neat-knowledge-rebuild)
 - Optional `broken_link: true` flag if recovery fails
 
 **Source path calculation (referenced storage only):**

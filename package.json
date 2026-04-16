@@ -5,10 +5,6 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node --test neat-knowledge-query/test",
-    "test:cache": "node --test neat-knowledge-query/test/kb-cache.test.js",
-    "test:integration": "node --test neat-knowledge-query/test/integration.test.js",
-    "test:all": "node --test neat-knowledge-query/test"
   },
   "dependencies": {
     "@mozilla/readability": "^0.6.0",

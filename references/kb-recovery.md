@@ -60,7 +60,7 @@ Finds moved or renamed files when source links break for referenced documents.
 
 **Triggers:**
 
-- neat-knowledge-query: Read fails with ENOENT loading referenced document
+- neat-knowledge-ask / neat-knowledge-extract: Read fails with ENOENT loading referenced document
 - neat-knowledge-rebuild: Batch validation of source links
 
 **Tools:** Glob for file search, AI reasoning for matching
