@@ -22,7 +22,9 @@ two-layer security checks.
 ## Skills
 
 - **neat-knowledge-ingest** - Convert content to markdown with security checks, auto-index
-- **neat-knowledge-query** - Search, ask questions, extract data, or browse categories
+- **neat-knowledge-search** - Fast keyword search with rich metadata and token costs
+- **neat-knowledge-ask** - Interactive research with AI synthesis and follow-ups
+- **neat-knowledge-extract** - Structured JSON extraction for automation
 - **neat-knowledge-rebuild** - Optimize categories via AI analysis, regenerate index files, validate sources
 
 ## Install
@@ -48,10 +50,10 @@ To uninstall:
 /neat-knowledge-ingest ~/Downloads/document.pdf
 /neat-knowledge-ingest ~/Downloads/documents/  # Batch processing (directory)
 
-# Query - Progressive disclosure with visible costs
-/neat-knowledge-query search "keyword"           # Shows: docs, sections, token costs (summary/full/sections)
-/neat-knowledge-query ask "research question"    # Agent sees costs, loads progressively based on depth
-/neat-knowledge-query extract "auth patterns"    # Agent-driven loading for automation, returns structured JSON
+# Query knowledge base
+/neat-knowledge-search "keyword"              # Fast search: shows docs, sections, token costs
+/neat-knowledge-ask "research question"       # Interactive: agent loads progressively, synthesizes answer
+/neat-knowledge-extract "auth patterns"       # Automation: returns structured JSON with optimized loading
 
 # Optimize categories (periodic maintenance)
 /neat-knowledge-rebuild
