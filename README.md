@@ -63,7 +63,7 @@ To uninstall:
 
 Inspired by [Claude-Mem](https://docs.claude-mem.ai/progressive-disclosure), neat-knowledge enables **full agent autonomy through visible metadata**:
 
-**Discovery → Filter Relevance → Decide Depth → Load**
+### Discovery → Filter Relevance → Decide Depth → Load
 
 1. **Search shows keyword matches (20-30) with rich metadata:**
 

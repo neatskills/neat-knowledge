@@ -2,144 +2,77 @@
 
 Agent-driven evaluation framework for filtering relevance and deciding loading depth.
 
-This framework powers two skills: **neat-knowledge-ask** (research-oriented, user questions) and **neat-knowledge-extract** (automation-oriented, skill queries). When either skill searches the knowledge base, the agent uses this evaluation framework to decide which documents are relevant and how deeply to load them.
+Powers ask (research) and extract (automation) skills. Agent decides which documents are relevant and how deeply to load them.
 
 ## Quick Reference: Ask vs Extract
 
-- **Ask:** Research queries that need comprehensive answers and citations. Bias toward deeper loading (sections/full) for quality.
-- **Extract:** Automation queries that need structured data. Bias toward summaries for efficiency.
+- **Ask:** Research queries. Bias toward deeper loading for quality.
+- **Extract:** Automation queries. Bias toward summaries for efficiency.
 
 ## Two-Part Evaluation
 
-Agent sees all keyword matches with full metadata, makes two explicit decisions:
+Agent sees all matches, makes explicit decisions:
 
-**Part 1 - RELEVANCE:** Which documents are relevant?
-- Semantic filtering based on summary, sections, tags, context
-- Not just keyword matching (already done)
-- Narrow from N matches → 2-5 relevant docs
+**RELEVANCE:** Semantic filtering (summary/sections/tags/context) narrows N matches → 2-5 docs
 
-**Part 2 - DEPTH:** What depth to load for each relevant doc?
-- Summary: Overview sufficient (~200 tokens) - measured from category metadata
-- Sections: Need specific section details (~500-1000 tokens per section) - measured from category metadata
-- Full: Need complete context (~3000-8000 tokens) - measured from category metadata
+**DEPTH:** Choose loading level:
 
-Token estimates are sourced from each document's category summary metadata, capturing actual token consumption for each loading depth.
+- Summary: ~200 tokens (overview)
+- Sections: ~500-1000 tokens/section (specific details)
+- Full: ~3000-8000 tokens (complete context)
+
+Token estimates from category metadata.
 
 ## Evaluation Prompt Template
 
-Present search results to agent with this structure:
-
 ```
-Found {N} matches for "{query/question}":
+Found {N} matches for "{query}":
 
 1. [{filename}] {title} - {category}
-   Summary: {summary_text}
-   Sections: {section_names}
-   Tokens: {summary} summary / {full} full / sections: {section: tokens}
+   Summary: {text}
+   Sections: {names}
+   Tokens: {summary} / {full} / sections: {...}
    Tags: [{tags}]
-
-2. [{filename}] {title} - {category}
-   ...
-
-[Continue for all N matches]
 
 Context: {ask or extract}
 
 Two-part evaluation:
-1. RELEVANCE: Which documents are relevant? Filter by summary, titles, sections, tags using semantic understanding, not just keywords.
-2. DEPTH: What loading depth for each relevant document? Consider token costs vs information needs.
+1. RELEVANCE: Which docs relevant? Semantic filter.
+2. DEPTH: What depth? Consider token costs vs info needs.
 
-Your decision: Which docs + what depth for good ROI?
+Decision: Which docs + depth for ROI?
 ```
 
 ## Context Differences
 
-**Ask (research):**
-- User question needs comprehensive answer
-- May need deeper context for synthesis
-- Citations required
-- Bias toward sections/full for quality
+**Ask:** Comprehensive answers with citations. Bias toward deeper loading.
 
-**Extract (automation):**
-- Skill needs structured data
-- Summary often sufficient
-- Predictable output required
-- Bias toward summaries for efficiency
+**Extract:** Structured data. Bias toward summaries.
 
 ## Example Decisions
 
-**Ask - Overview question:**
-```
-Question: "What authentication methods are available?"
-Decision: Docs 1, 3, 5 relevant. Load summaries (600 tokens) - provides overview without deep detail.
-```
+**Ask - Overview:** "What auth methods?" → Docs 1,3,5 summaries (600 tokens)
 
-**Ask - Technical question:**
-```
-Question: "How does JWT token validation work?"
-Decision: Docs 1, 2 relevant. Load 'JWT Flow' section from doc 1, 'Validation' section from doc 2 (1.2K tokens) - targeted technical details.
-```
+**Ask - Technical:** "How JWT validation works?" → Load 'JWT Flow', 'Validation' sections (1.2K)
 
-**Ask - Deep investigation:**
-```
-Question: "Explain the complete OAuth flow with error handling"
-Decision: Doc 1 relevant, needs complete context. Load full document (3.5K tokens) - comprehensive coverage required.
-```
-
-**Extract - High-level data:**
-```
-Query: "authentication methods"
-Decision: Docs 1, 2, 4 relevant for tech stack overview. Load summaries (540 tokens) - sufficient for listing methods.
-```
-
-**Extract - Specific data:**
-```
-Query: "JWT implementation details"
-Decision: Docs 1, 3 relevant. Load 'Implementation' and 'Security' sections (1.4K tokens) - specific data needed.
-```
+**Extract - High-level:** "auth methods" → Docs 1,2,4 summaries (540 tokens)
 
 ## Token Cost ROI Considerations
 
-**ROI formula:** (Relevance × Information Density) / Token Cost
+**ROI:** (Relevance × Info Density) / Token Cost. Higher = better.
 
-Higher ratio = better ROI (more relevant + informative, fewer tokens). Low ROI docs should be skipped or loaded minimally.
+**High ROI:** Relevant + need section → load section; need overview → summary; multiple similar → summaries
 
-**High ROI:**
-- Very relevant doc, need specific section → load section
-- Highly relevant, need overview → load summary
-- Multiple docs cover same topic → load summaries, pick best
+**Low ROI:** Marginally relevant → skip; need 1 fact from 8K → try section; have answer → stop
 
-**Low ROI:**
-- Marginally relevant → skip entirely
-- Need 1 fact from 8K doc → try section first
-- Already have answer → stop loading
-
-**Progressive loading:**
-1. Start with summaries (already in memory, ~200 tokens per doc)
-2. If insufficient, load targeted sections (~500-1000 tokens each)
-3. If still insufficient, load full document (~3000-8000 tokens)
-4. Stop as soon as answer is complete
-
-Summaries are presented first because they're already in the evaluation context; however, each loading depth carries token cost that factors into ROI decisions.
+**Progressive:** Summaries (in memory) → sections (targeted) → full (complete). Stop when sufficient.
 
 ## Key Principles
 
-**No system pre-filtering:**
-- Agent sees ALL keyword matches
-- Agent makes ALL relevance decisions
-- System provides metadata, agent decides
+**No pre-filtering:** Agent sees all keyword matches, makes all decisions
 
-**No artificial caps:**
-- If 87 docs match keywords, agent sees all 87
-- Agent naturally prioritizes best matches
-- Trust agent to handle any result set size
+**No caps:** Agent handles any result size naturally
 
-**Explicit decisions:**
-- Agent must state which docs and why
-- Agent must state depth and why
-- No implicit "load everything" or "load nothing"
+**Explicit decisions:** State which docs + depth + reasoning
 
-**ROI optimization:**
-- Balance relevance vs token cost
-- Progressive loading (summary → sections → full)
-- Stop when sufficient information obtained
+**ROI optimization:** Balance relevance vs cost, progressive loading, stop when sufficient

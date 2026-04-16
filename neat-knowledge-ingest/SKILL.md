@@ -9,47 +9,17 @@ description: Use when adding content to knowledge base - converts web/PDF/Word/E
 
 ## Overview
 
-Converts content to markdown with security checks, AI metadata, and auto-indexing.
-
-**References:** Shared at `references/kb-*.md`
-
-**Storage:** Embedded (full in KB) or referenced (source, on-demand). See [KB Schema](../references/kb-schema.md).
+Converts web/PDF/Word/Excel/images/text to markdown with security checks and auto-indexing.
 
 **Types:** Web (URL), PDF, Word (.docx), Excel (.xlsx/.xls), Images, Text/markdown
 
-**Modes:** Single file or batch (directory, recursive)
+**Modes:** Single or batch (directory, recursive)
 
-**Limits:** No .doc, complex formatting/images may degrade
-
-**Usage:** `/neat-knowledge-ingest <source>` (URL, file, or directory)
-
-## When to Use
-
-Add web articles, PDFs, Office files, or images to KB (single/batch). Build knowledge repository.
-
-## Quick Reference
-
-| Source | Command | Notes |
-| --- | --- | --- |
-| Web | `/neat-knowledge-ingest <url>` | Static HTML only |
-| PDF | `/neat-knowledge-ingest <path.pdf>` | Auto-chunked if > 20 pages |
-| Word | `/neat-knowledge-ingest <path.docx>` | .doc unsupported |
-| Excel | `/neat-knowledge-ingest <path.xlsx>` | Sheets to tables |
-| Image | `/neat-knowledge-ingest <path.png>` | AI text extraction |
-| Text | `/neat-knowledge-ingest <path.txt>` | Direct import |
-| **Batch** | `/neat-knowledge-ingest <directory>` | **Recursive all types** |
-
-**Security:** Two-layer (filename + content)  
-**Storage:** Web/images embedded, local files user choice (default embedded)  
-**Output:** Embedded → `{KB_PATH}/{category}/{file}.md`, referenced → summary only
+**Usage:** `/neat-knowledge-ingest <source>`
 
 ## Prerequisites
 
-Dependencies: mammoth, node-xlsx, @mozilla/readability, jsdom, turndown
-
-Run `npm install`. Cancel if missing, show install instructions.
-
-**Limit:** Web needs static HTML (no JS-heavy sites)
+Dependencies: mammoth, node-xlsx, @mozilla/readability, jsdom, turndown. Run `npm install` if missing.
 
 ## Workflow
 
@@ -70,60 +40,14 @@ Follow [KB Detection](../references/kb-detection.md). If creating new KB, create
 
 ### Step 3: Directory Processing (Directory only)
 
-**Triggered:** Source is directory (auto-detect, recursive)
-
-1. **Validate:** Path is directory (else error "Not a directory: {path}")
-
-2. **Glob recursive:**
-
-   ```javascript
-   Pattern: `${sourcePath}/**/*`
-   Include: *.md, *.pdf, *.docx, *.xlsx, *.xls, *.png, *.jpg, *.jpeg, *.gif, *.txt
-   Exclude: node_modules/, .git/, dist/, build/, .next/, out/, *.tmp, *.bak
-   ```
-
-3. **Load ignore:** Check `{KB_PATH}/.index/ignore`, parse gitignore-style
-
-4. **Security (Layer 1):**
-   - Scan filenames for: `.env*`, `.pem`, `.key`, `password`, `credential`, `token`, `apikey`
-   - If suspicious: warn, ask "Continue? (y/n)" (default: n)
-
-5. **Filter/count:** Remove ignored/unsupported, group by type, calc size
-
-6. **Preview:**
-
-   ```
-   Found {N} files in {path}:
-   
-   By type:
-   - Markdown: {count}
-   - PDF: {count}
-   - Word: {count}
-   
-   Total: {size}
-   
-   Continue? [y/n] (default: y)
-   ```
-
-   If `n`: cancel
-
-7. **Process:**
-   - Progress: "Processing {current}/{total}: {file}"
-   - Run Steps 4-13 per file
-   - **Skip:** Step 4 (Layer 1 done), Step 7 (image review), Step 8 (web quality)
-   - Continue on errors
-   - Track: success, skip, fail counts
-
-8. **Complete:**
-
-   ```
-   Directory import complete:
-   - Successful: {success}
-   - Skipped: {skip}
-   - Failed: {fail}
-   
-   Run /neat-knowledge-rebuild to maintain categories
-   ```
+1. Validate directory
+2. Glob recursive (include: *.md/pdf/docx/xlsx/xls/png/jpg/gif/txt; exclude: node_modules/.git/dist/build/.next/out/*.tmp/*.bak)
+3. Load ignore from `{KB_PATH}/.index/ignore`
+4. Security Layer 1: Scan filenames (.env*, .pem, .key, password, credential, token, apikey), warn if suspicious
+5. Filter, count, group by type
+6. Preview with counts/size, ask "Continue?"
+7. Process each: Run Steps 4-13 per file (skip 4/7/8), track success/skip/fail
+8. Complete: "Directory import complete: {success}/{skip}/{fail}. Run /neat-knowledge-rebuild"
 
 **Ends workflow.** Single files continue to Step 4.
 
@@ -178,85 +102,22 @@ Scan: API keys, passwords, private keys, DB strings, JWT, secrets. **If found:**
 
 ### Step 10: Generate Complete Metadata
 
-Log: `Analyzing content...`
+Log "Analyzing content...", load existing categories from metadata.json
 
-Load `metadata.json`, extract existing categories.
-
-**Spawn subagent:**
-
-If existing categories:
+Spawn subagent with prompt:
 
 ```
-Analyze content, extract metadata.
-
-EXISTING (prefer):
-${existingCategories.map(c => `- ${c.name} (${c.count})`).join('\n')}
-
-Category: 1) Match existing (PREFERRED), 2) Create NEW if doesn't fit, 3) lowercase-hyphenated
-
-Return JSON (no whitespace):
-{
-  "title": "from heading or filename",
-  "summary": "2-3 sentences (max 300 chars)",
-  "tags": ["5-10", "specific", "terms"],
-  "sections": [{"heading": "Title", "preview": "first 100 chars"}],
-  "category": "web-development",
-  "is_new": false,
-  "reasoning": "Fits existing web-development"
-}
+Analyze, extract metadata. EXISTING (prefer): {categories}
+Return JSON: {title, summary (2-3 sent, max 300 chars), tags (5-10), sections ([{heading, preview}]), category (lowercase-hyphenated), is_new, reasoning}
 ```
 
-If no existing:
+Parse/derive: Extract fields, sanitize title to filename
 
-```
-Analyze content, extract metadata.
+Calculate tokens: Create temp markdown with frontmatter, run `count-tokens.js`, parse `{summary, full, sections}`, clean temp
 
-Return JSON (no whitespace):
-{
-  "title": "from heading or filename",
-  "summary": "2-3 sentences (max 300 chars)",
-  "tags": ["5-10", "specific", "terms"],
-  "sections": [{"heading": "Title", "preview": "first 100 chars"}],
-  "category": "lowercase-hyphenated"
-}
-```
+Store: title, summary, tags, sections, category, filename, tokens
 
-**Parse/derive:**
-
-- Extract: `title`, `summary`, `tags`, `sections`, `category`, `is_new`, `reasoning`
-- Derive `filename`: Sanitize title (lowercase, spaces/special → hyphens, add `.md`)
-
-**Calculate tokens:**
-
-Create temp markdown with frontmatter:
-
-```markdown
----
-title: {title}
-summary: {summary}
-tags: {tags}
-category: {category}
----
-
-{markdown_content}
-```
-
-Bash: `node <skill-dir>/scripts/count-tokens.js /tmp/temp-doc-{timestamp}.md`
-
-Parse JSON:
-
-```json
-{"summary": 150, "full": 3500, "sections": {"Introduction": 200, "Architecture": 800}}
-```
-
-Store tokens for Step 12, clean temp file.
-
-**Store for Steps 11-12:** `title`, `summary`, `tags`, `sections`, `category`, `filename`, `tokens`
-
-**Log:**
-
-- If `is_new`: "Creating category: {category} - {reasoning}"
-- "Category: {category}, Tags: {tags}, File: {filename}"
+Log: If is_new: "Creating category: {category} - {reasoning}". Then: "Category: {category}, Tags: {tags}, File: {filename}"
 
 ### Step 11: Save Document (Embedded Storage Only)
 
@@ -268,74 +129,22 @@ Store tokens for Step 12, clean temp file.
 
 Follow [KB Schema](../references/kb-schema.md).
 
-**index.json:** Load or create `{"documents": {}}` at `.index/index.json`. If corrupt: recreate empty, log "Warning: index.json corrupt, recreated empty".
+**index.json:** Load/create, add entry (title, category, tags, file_path, storage), write compact
 
-Add entry: `title`, `category`, `tags` (Step 10), `file_path`: `{category}/{filename}.md`, `storage`. Write compact.
+**summaries/{category}.json:** Load/create, add doc (filename key: title, summary, tags, sections, tokens, category, file_path, last_modified, storage, source if referenced), write atomic
 
-**summaries/{category}.json:**
+**Source calc (referenced):** Relative path from source_root or KB parent
 
-1. Load or create:
-   - Path: `.index/summaries/{category}.json`
-   - If missing: Create `{"category": "{category}", "documents": {}}`
-   - If corrupt: Log, treat as new
+**metadata.json:** Increment document_count, categories[category], tags[tag], write compact
 
-2. Add/update document:
-   - Key: `{filename}`
-   - Value: `title`, `summary`, `tags`, `sections`, `tokens`, `category`, `file_path`, `last_modified` (ISO-8601), `storage`, `source` (referenced only, relative)
-
-3. **Source calc (referenced only):**
-   - Get KB_PATH, source_root from metadata
-   - Relative: If starts with source_root: `path.relative(source_root, sourcePath)`, else: `path.relative(path.dirname(KB_PATH), sourcePath)`
-   - Example: `/Users/ji/project/docs/arch.pdf` + source_root `/Users/ji/project/` → `docs/arch.pdf`
-
-4. Write atomic:
-
-   ```javascript
-   temp = `.index/summaries/.${category}.json.tmp`;
-   fs.writeFileSync(temp, JSON.stringify(data, null, 2));
-   fs.renameSync(temp, `.index/summaries/${category}.json`);
-   ```
-
-**metadata.json:** Load from `.index/metadata.json`. Update: increment `document_count`, `categories[category]`, `tags[tag]` (set 1 if new). Write compact.
-
-**Order:** index.json, summaries, metadata.json. If fails, abort (partial OK). Log: "Indexes updated"
+Order: index → summaries → metadata. Log "Indexes updated"
 
 ### Step 13: Complete
 
-**If embedded:**
+"Document added! Storage: {Embedded/Referenced}, Location/Source: {path}, Category: {category}, Tags: {tags}. Note: Run /neat-knowledge-rebuild periodically"
 
-```
-Document added!
-  Storage: Embedded
-  Location: {KB_PATH}/{category}/{filename}.md
-  Category: {category}
-  Tags: {tags}
-
-Note: Run /neat-knowledge-rebuild periodically to optimize categories
-```
-
-**If referenced:**
-
-```
-Document added!
-  Storage: Referenced
-  Source: {source}
-  Summary in KB
-  Category: {category}
-  Tags: {tags}
-
-Note: Run /neat-knowledge-rebuild periodically to:
-  - Validate source links
-  - Optimize categories
-```
-
-If sensitive flag: show security reminder from Step 9.
+If sensitive: show security reminder
 
 ## Common Mistakes
 
-- Ingesting JS-heavy SPAs (needs JS execution)
-- Rigid security patterns (reason instead)
-- Not reviewing web quality or errors
-- Using Read for Office files (use convert-office.js for .docx/.xlsx)
-- Not invoking fetch-web-content.js for URLs (can't fetch directly)
-- Missing dependency checks or index updates
+Ingesting JS-heavy SPAs, rigid security patterns, using Read for Office files, not invoking scripts for web/Office
