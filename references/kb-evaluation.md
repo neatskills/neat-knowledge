@@ -2,6 +2,13 @@
 
 Agent-driven evaluation framework for filtering relevance and deciding loading depth.
 
+This framework powers two skills: **neat-knowledge-ask** (research-oriented, user questions) and **neat-knowledge-extract** (automation-oriented, skill queries). When either skill searches the knowledge base, the agent uses this evaluation framework to decide which documents are relevant and how deeply to load them.
+
+## Quick Reference: Ask vs Extract
+
+- **Ask:** Research queries that need comprehensive answers and citations. Bias toward deeper loading (sections/full) for quality.
+- **Extract:** Automation queries that need structured data. Bias toward summaries for efficiency.
+
 ## Two-Part Evaluation
 
 Agent sees all keyword matches with full metadata, makes two explicit decisions:
@@ -12,9 +19,11 @@ Agent sees all keyword matches with full metadata, makes two explicit decisions:
 - Narrow from N matches → 2-5 relevant docs
 
 **Part 2 - DEPTH:** What depth to load for each relevant doc?
-- Summary: Overview sufficient (~200 tokens)
-- Sections: Need specific section details (~500-1000 tokens per section)
-- Full: Need complete context (~3000-8000 tokens)
+- Summary: Overview sufficient (~200 tokens) - measured from category metadata
+- Sections: Need specific section details (~500-1000 tokens per section) - measured from category metadata
+- Full: Need complete context (~3000-8000 tokens) - measured from category metadata
+
+Token estimates are sourced from each document's category summary metadata, capturing actual token consumption for each loading depth.
 
 ## Evaluation Prompt Template
 
@@ -34,7 +43,7 @@ Found {N} matches for "{query/question}":
 
 [Continue for all N matches]
 
-Context: {ask|extract}
+Context: {ask or extract}
 
 Two-part evaluation:
 1. RELEVANCE: Which documents are relevant? Filter by summary, titles, sections, tags using semantic understanding, not just keywords.
@@ -91,7 +100,9 @@ Decision: Docs 1, 3 relevant. Load 'Implementation' and 'Security' sections (1.4
 
 ## Token Cost ROI Considerations
 
-**ROI formula:** Relevance × Information Density / Token Cost
+**ROI formula:** (Relevance × Information Density) / Token Cost
+
+Higher ratio = better ROI (more relevant + informative, fewer tokens). Low ROI docs should be skipped or loaded minimally.
 
 **High ROI:**
 - Very relevant doc, need specific section → load section
@@ -104,10 +115,12 @@ Decision: Docs 1, 3 relevant. Load 'Implementation' and 'Security' sections (1.4
 - Already have answer → stop loading
 
 **Progressive loading:**
-1. Start with summaries (free, already loaded)
-2. If insufficient, load targeted sections
-3. If still insufficient, load full document
+1. Start with summaries (already in memory, ~200 tokens per doc)
+2. If insufficient, load targeted sections (~500-1000 tokens each)
+3. If still insufficient, load full document (~3000-8000 tokens)
 4. Stop as soon as answer is complete
+
+Summaries are presented first because they're already in the evaluation context; however, each loading depth carries token cost that factors into ROI decisions.
 
 ## Key Principles
 
