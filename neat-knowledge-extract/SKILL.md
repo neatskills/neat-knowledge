@@ -39,7 +39,11 @@ Follow [KB Detection](../references/kb-detection.md). Store KB path.
 
 Call `/neat-knowledge-search` in internal mode with the query.
 
+Note: Internal mode returns structured JSON for programmatic invocation, not human-readable formatting.
+
 Returns all keyword matches with metadata (summary, category, tags, tokens, sections, storage, file_path).
+
+If no results: Return empty JSON `{"documents": [], "total": 0, "loading_strategy": "none", "tokens_loaded": 0}`
 
 Store results for agent evaluation.
 
@@ -49,6 +53,8 @@ Follow [KB Evaluation](../references/kb-evaluation.md) framework.
 
 Present search results to agent with automation context:
 
+Note: You (the executing agent) perform this evaluation.
+
 ```
 Query: "{query}"
 
@@ -57,7 +63,7 @@ Found {N} matches:
 1. [{filename}] {title} - {category}
    Summary: {text}
    Sections: {names}
-   Tokens: {summary} / {full} / sections: {section: tokens}
+   Tokens: {summary} summary / {full} full / sections: {section: tokens}
    Tags: [{tags}]
 
 [Continue for all N]
