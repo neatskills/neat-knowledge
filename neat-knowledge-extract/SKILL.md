@@ -49,7 +49,7 @@ Follow [KB Loading](../references/kb-loading.md). Initialize cache, check before
 
 Summaries: Already cached. Sections/Full: Check cache, load if needed, cache, extract.
 
-Broken links: Skip if `broken_link: true`, include warning in JSON if any
+Broken links: Skip if `broken_link: true`, track skipped documents, include warnings array in JSON with one entry per broken link
 
 ### Step 4: Output JSON
 

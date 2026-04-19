@@ -25,6 +25,8 @@ Initialize state: `turns: []`, `all_sources: []`, `contentCache: {}`
 
 Call `/neat-knowledge-search` in internal mode. Returns JSON with keyword matches + metadata.
 
+If no results: Show "No documents found for '{question}'. Try broader terms or different keywords." Exit workflow.
+
 ### Step 2: Agent Evaluation
 
 Follow [KB Evaluation](../references/kb-evaluation.md). Review results inline:
@@ -57,6 +59,8 @@ Build prompt with history, question, loaded content, instructions (cite sources,
 ### Step 5: Display
 
 Show answer with citations: "{answer}\n\nSources: {filenames}"
+
+If any broken links were skipped: Append "\n\nNote: Some referenced sources were unavailable (broken links)."
 
 ### Step 6: Track
 

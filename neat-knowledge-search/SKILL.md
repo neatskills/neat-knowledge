@@ -13,6 +13,11 @@ Fast keyword search returning metadata only (no content). Returns all matches wi
 
 **Usage:** `/neat-knowledge-search <query>`
 
+## Prerequisites
+
+- Knowledge base with `.index/index.json` and `.index/summaries/` structure
+- Category summary files for rich metadata
+
 ## KB Detection
 
 Follow [KB Detection](../references/kb-detection.md). Error if missing/corrupt.
@@ -21,17 +26,17 @@ Follow [KB Detection](../references/kb-detection.md). Error if missing/corrupt.
 
 ### Stage 1: Keyword Filter
 
-1. Load index.json
-2. Filter by query (case-insensitive): match title/category/tags, support `category:name` syntax
-3. Sort by relevance (matching field count)
-4. If none: suggest broader keywords
+- Load index.json
+- Filter by query (case-insensitive): match title/category/tags, support `category:name` syntax
+- Sort by relevance (matching field count)
+- If none: suggest broader keywords
 
 ### Stage 2: Load Rich Metadata
 
-1. Group by category
-2. Load summaries, follow [Common Procedures](../references/kb-schema.md#loading-category-summary-files)
-3. Extract: summary, tokens, sections, storage, file_path
-4. Skip if not in summary file
+- Group by category
+- Load summaries, follow [Common Procedures](../references/kb-schema.md#loading-category-summary-files)
+- Extract: summary, tokens, sections, storage, file_path
+- Skip if not in summary file
 
 ### Stage 3: Format and Return
 
@@ -67,12 +72,15 @@ Structured JSON output:
       "tokens": {"summary": 200, "full": 3500, "sections": {...}},
       "sections": [{"heading": "Introduction", "preview": "..."}],
       "storage": "embedded",
-      "file_path": "security/auth-patterns.md"
+      "file_path": "security/auth-patterns.md",
+      "broken_link": false
     }
   ],
   "total_returned": 1
 }
 ```
+
+Note: `broken_link` field (optional boolean) indicates if referenced file is missing.
 
 ## Common Mistakes
 
