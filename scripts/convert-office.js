@@ -56,11 +56,13 @@ function formatSheetAsMarkdown(sheet, shouldShowHeader) {
   }
 
   const separator = Array(headers.length).fill('---');
+  const headerCount = headers.length;
+
   parts.push(formatTableRow(headers));
   parts.push(formatTableRow(separator));
 
   rows.forEach(row => {
-    const cells = Array.from({ length: headers.length }, (_, i) => row[i] ?? '');
+    const cells = Array.from({ length: headerCount }, (_, i) => row[i] ?? '');
     parts.push(formatTableRow(cells));
   });
 

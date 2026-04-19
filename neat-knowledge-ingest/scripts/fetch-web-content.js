@@ -36,8 +36,7 @@ export async function fetchWebContent(url) {
 
   let totalSize = 0;
   const streamReader = response.body.getReader();
-  const decoder = new TextDecoder();
-  const chunks = [];
+  const bytes = [];
 
   try {
     while (true) {
@@ -49,13 +48,21 @@ export async function fetchWebContent(url) {
         throw new Error(`Response size ${totalSize} bytes exceeds limit of ${MAX_RESPONSE_SIZE} bytes`);
       }
 
-      chunks.push(decoder.decode(value, { stream: true }));
+      bytes.push(value);
     }
   } finally {
     streamReader.releaseLock();
   }
 
-  const html = chunks.join('');
+  const combined = new Uint8Array(totalSize);
+  let offset = 0;
+  for (const chunk of bytes) {
+    combined.set(chunk, offset);
+    offset += chunk.length;
+  }
+
+  const decoder = new TextDecoder();
+  const html = decoder.decode(combined);
 
   if (!html || html.length < MIN_HTML_LENGTH) {
     throw new Error('Response body too small or empty');
@@ -68,15 +75,13 @@ export async function fetchWebContent(url) {
     const articleReader = new Readability(document);
     const article = articleReader.parse();
 
-    let markdown, title, excerpt, usedFallback = false;
+    let markdown, title, excerpt;
 
     if (article) {
       markdown = turndownService.turndown(article.content);
       title = article.title || '';
       excerpt = article.excerpt || '';
     } else {
-      usedFallback = true;
-
       const titleElement = document.querySelector('title');
       title = titleElement?.textContent || '';
 
@@ -96,7 +101,7 @@ export async function fetchWebContent(url) {
       markdown,
       title,
       excerpt,
-      usedFallback
+      usedFallback: !article
     };
   } finally {
     dom.window.close();

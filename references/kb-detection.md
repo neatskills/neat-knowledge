@@ -42,6 +42,6 @@ Initialize metadata.json:
 }
 ```
 
-`source_root`: Absolute path where source documents are located (usually project root). Used for source link recovery when documents use referenced storage. Example: `/Users/ji/project/`
+`source_root`: Absolute path where source documents are located (usually project root). Used for source link recovery when documents use referenced storage. Example: `/Users/username/my-project/`
 
 Store path as `KB_PATH` for all operations.

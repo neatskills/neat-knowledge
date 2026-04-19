@@ -21,11 +21,12 @@ two-layer security checks.
 
 ## Skills
 
+- **neat-knowledge-capture** - Extract solutions/workflows from conversation, save to captures/
 - **neat-knowledge-ingest** - Convert content to markdown with security checks, auto-index
 - **neat-knowledge-search** - Fast keyword search with rich metadata and token costs
 - **neat-knowledge-ask** - Interactive research with AI synthesis and follow-ups
 - **neat-knowledge-extract** - Structured JSON extraction for automation
-- **neat-knowledge-rebuild** - Optimize categories via AI analysis, regenerate index files, validate sources
+- **neat-knowledge-rebuild** - Optimize categories, consolidate captures, regenerate indexes
 
 ## Install
 
