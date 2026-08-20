@@ -5,7 +5,7 @@ description: Use when optimizing KB - redesigns categories, detects patterns in 
 
 # Knowledge Base Rebuild
 
-**Role:** You are a data architect who optimizes category structures, identifies patterns across team captures, and maintains KB health.
+**Role:** You are a data architect who optimizes category structures, identifies patterns across team captures, and maintains KB health — producing an optimized category structure and consolidated captures.
 
 ## Overview
 
@@ -13,17 +13,19 @@ Comprehensive KB maintenance: optimizes categories via AI analysis, detects capt
 
 **Usage:** `/neat-knowledge-rebuild`
 
-**Prerequisites:** KB with documents (regenerates .index/ if needed)
+## When to Use
 
-## KB Detection
+**Run when:** Categories messy, KB grown significantly, 10+ related captures, captures 6+mo old, periodic maintenance, validate sources needed.
 
-See [KB Detection](../references/kb-detection.md). If none: error "No KB found. Run /neat-knowledge-ingest"
+**Skip when:** Categories organized, KB <20 docs, just added 1-2 docs, captures <5 per topic, all captures recent (<3mo).
 
-## Workflow
+## Prerequisites
 
-### Step 1: Detect KB
+KB with documents (regenerates .index/ if needed)
 
-Follow [KB Detection](../references/kb-detection.md).
+## Phase 1: Rebuild
+
+**Step 1 — Detect KB:** Follow [KB Detection](../references/kb-detection.md). If none: error "No KB found. Run /neat-knowledge-ingest"
 
 **If KB exists but index files missing/corrupt:**
 
@@ -38,9 +40,7 @@ If markdown exists and index missing/corrupt:
 
 If no markdown: Error "KB empty. Run /neat-knowledge-ingest"
 
-### Step 2: Regenerate Index Files (Optional)
-
-User controls regeneration. **If auto-triggered from Step 1:** Skip prompts, regenerate both.
+**Step 2 — Regenerate Index Files (Optional):** User controls regeneration. **If auto-triggered from Step 1:** Skip prompts, regenerate both.
 
 Follow [KB Schema](../references/kb-schema.md).
 
@@ -62,52 +62,23 @@ If `y`: Scan KB, group by category, extract sections, write `.index/summaries/{c
 
 **Errors:** No markdown, invalid KB_PATH, or write failures exit without partial updates.
 
-### Step 3: Analyze KB Content
+**Step 3 — Analyze KB Content:** Load index/summaries, log "Analyzing {count} documents across {cat_count} categories..."
 
-Load index/summaries, log "Analyzing {count} documents across {cat_count} categories..."
+**Step 4 — Design Category Structure:** AI designs structure targeting 5-15 categories. JSON: `{proposed_categories, reasoning, major_changes, document_assignments}`. Show "Analyzing...", proceed to Step 5.
 
-### Step 4: Design Category Structure
-
-AI designs structure targeting 5-15 categories. JSON: `{proposed_categories, reasoning, major_changes, document_assignments}`. Show "Analyzing...", proceed to Step 5.
-
-### Step 5: Show Optimization Plan
-
-```
-Category Optimization Plan
-==========================
-
-CURRENT: {X} → PROPOSED: {Y}
-
-NEW STRUCTURE:
-1. web-development (65 docs)
-   Frontend frameworks, JavaScript
-   From: web-dev (5), frontend (8), development subset (40)
-
-REASONING: {AI reasoning}
-MAJOR CHANGES: Merged 4 similar into web-development
-REASSIGNMENTS: {count} of {total}
-EXAMPLES: react-hooks.md: development → web-development
-
-Apply? [y/n] (default: y)
-```
+**Step 5 — Show Optimization Plan:** Present per [rebuild-templates.md](references/rebuild-templates.md#step-5--optimization-plan) — current/proposed category counts, new structure with reasoning and reassignment counts, examples. Ask to apply.
 
 If `n`: Skip to Step 7
 
-### Step 6: Execute Optimization
-
-Per document: Move file if embedded (update frontmatter), update summaries/index.json (batch, atomic). After all: Update metadata.json, delete empty folders.
+**Step 6 — Execute Optimization:** Per document: Move file if embedded (update frontmatter), update summaries/index.json (batch, atomic). After all: Update metadata.json, delete empty folders.
 
 Log: "Optimization complete: Categories {old}→{new}, Reassigned {count}/{total}"
 
-### Step 7: Validate Sources (Referenced Only)
-
-Follow [KB Recovery](../references/kb-recovery.md). Skip if no referenced docs or `broken_link: true`.
+**Step 7 — Validate Sources (Referenced Only):** Follow [KB Recovery](../references/kb-recovery.md). Skip if no referenced docs or `broken_link: true`.
 
 Validate with Read, recover via glob/AI match, auto-fix found, prompt for ambiguous/not_found, recompute metadata. Show summary.
 
-### Step 8: Capture Pattern Detection (Optional)
-
-**Only if captures/ category exists.**
+**Step 8 — Capture Pattern Detection (Optional):** Only if captures/ category exists.
 
 ```
 Analyze captures for patterns and consolidation? [y/n] (default: n)
@@ -119,66 +90,17 @@ If `y`:
 
 **Analyze:** Read cluster content, identify themes, skip if too different or too recent (<1 month).
 
-**Present:**
-
-```
-Pattern Detection Results
-=========================
-
-Found 2 consolidation opportunities:
-
-1. PostgreSQL Connection Issues (5 captures)
-   Type: solutions → captures/solutions/
-   
-2. Microservice Deployment (4 captures)
-   Type: workflows → captures/workflows/
-   → Can be automated via /writing-skills
-
-Options: c=Consolidate all, r=Review each, s=Skip
-```
+**Present:** Per [rebuild-templates.md](references/rebuild-templates.md#step-8--pattern-detection-results) — list each consolidation opportunity (capture count, type, destination), offer consolidate-all/review-each/skip.
 
 **If r:** Show each cluster with options: v=View, y=Consolidate, n=Skip
 
-### Step 9: Execute Consolidation
-
-**For each cluster:**
+**Step 9 — Execute Consolidation:** For each cluster:
 
 **Generate:** Spawn subagent to create consolidated capture. Determine procedural (workflows=true, solutions=false). Synthesize patterns, preserve approaches, add examples, include team recommendation. For workflows: add steps/code/variations, note "/writing-skills automation candidate".
 
-**Save:** `{KB_PATH}/captures/{type}/{filename}.md`
+**Save:** `{KB_PATH}/captures/{type}/{filename}.md`. Frontmatter per [rebuild-templates.md](references/rebuild-templates.md#step-9--consolidated-capture-frontmatter) (category, type, title, tags, summary, date, `synthesized_from` list, contributors, procedural flag). Include History section. Create dir if needed.
 
-Frontmatter:
-
-```yaml
----
-category: captures
-type: {type}
-title: {title}
-tags: {combined}
-summary: {generated}
-date: {today}
-synthesized_from:
-  - path: captures/solutions/postgres-timeout.md
-    author: alice
-    date: 2026-03-15
-    summary: "Connection timeout"
-team_captures: {count}
-contributors: [alice, bob]
-procedural: {boolean}
-automation_candidate: {if procedural}
----
-```
-
-Include History section. Create dir if needed.
-
-**Review:**
-
-```
-Created: captures/solutions/postgresql-connection-management.md
-[First 500 chars]
-
-Options: v=View full, y=Approve/delete sources, k=Keep specific, n=Cancel
-```
+**Review:** Per [rebuild-templates.md](references/rebuild-templates.md#step-9--consolidation-review) — show the created file and first 500 chars, offer view/approve-delete-sources/keep-specific/cancel.
 
 **If k:** List captures, prompt for numbers, confirm deletion subset.
 
@@ -195,9 +117,7 @@ Net: 7 fewer captures
 Workflow automations: Use /writing-skills
 ```
 
-### Step 10: Capture Cleanup (Optional)
-
-**Only if captures/ exists.**
+**Step 10 — Capture Cleanup (Optional):** Only if captures/ exists.
 
 ```
 Review stale captures for cleanup? [y/n] (default: n)
@@ -205,20 +125,7 @@ Review stale captures for cleanup? [y/n] (default: n)
 
 If `y`:
 
-Categorize: Active (<6mo), Aging (6-12mo), Stale (12+mo).
-
-```
-Capture Cleanup Report
-======================
-
-Total: 45 | Active: 32 | Aging: 8 | Stale: 5
-
-Stale (12+ months):
-1. webpack-4-config.md (18mo, tech upgraded)
-2. old-api-design.md (14mo, 0 refs)
-
-Options: d=Delete all, r=Review each, k=Keep all, v=View details
-```
+Categorize: Active (<6mo), Aging (6-12mo), Stale (12+mo). Report per [rebuild-templates.md](references/rebuild-templates.md#step-10--capture-cleanup-report) — totals by category, list of stale captures with age and reason, offer delete-all/review-each/keep-all/view-details.
 
 **If r:** Show each with d/k/v options, execute after review.
 
@@ -230,15 +137,9 @@ Deleted: 5 stale captures (in git history)
 Active: 40 remaining
 ```
 
-### Step 11: Complete
+**Step 11 — Complete:** "Rebuild complete! Categories {old}→{new} ({reassigned} docs), Sources: {validated}/{fixed}/{broken}, Captures: {consolidated} patterns ({deleted} deleted, {kept} kept), {stale_deleted} stale deleted"
 
-"Rebuild complete! Categories {old}→{new} ({reassigned} docs), Sources: {validated}/{fixed}/{broken}, Captures: {consolidated} patterns ({deleted} deleted, {kept} kept), {stale_deleted} stale deleted"
-
-## When to Use
-
-**Run when:** Categories messy, KB grown significantly, 10+ related captures, captures 6+mo old, periodic maintenance, validate sources needed.
-
-**Skip when:** Categories organized, KB <20 docs, just added 1-2 docs, captures <5 per topic, all captures recent (<3mo).
+Done.
 
 ## Category Design Principles
 

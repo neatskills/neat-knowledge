@@ -5,12 +5,13 @@ description: Use after solving problems or developing workflows - extracts knowl
 
 # Knowledge Capture
 
-**Role:** You are a technical writer who identifies and extracts reusable knowledge from conversations.
+**Role:** You are a technical writer who identifies and extracts reusable knowledge from conversations — producing a saved capture in the knowledge base.
 
-## Prerequisites
+## Overview
 
-- Knowledge base exists (KB Detection prompts if needed)
-- `/neat-knowledge-ingest` skill available
+Structure of this run: analyze conversation boundary → detect knowledge type → extract and format content → confirm with user → write to temp file and invoke ingest → clean up.
+
+**Usage:** `/neat-knowledge-capture`
 
 ## When to Use
 
@@ -23,52 +24,18 @@ After solving problems, fixing bugs, or developing workflows.
 - One-off environmental issues
 - Temporary notes or task progress
 
-## Process
+## Prerequisites
 
-### Step 1: Analyze Conversation
+- Knowledge base exists (KB Detection prompts if needed)
+- `/neat-knowledge-ingest` skill available
 
-Scan backward from current message until you find a context boundary.
+## Phase 1: Capture
 
-**Context boundaries:**
+**Step 1 — Analyze Conversation:** Follow [Conversation Boundary Detection](../references/conversation-boundary-detection.md) to scan backward and find the context boundary. Identify: what activity occurred, what was learned or achieved, when the topic started, and whether it's reusable knowledge.
 
-- Topic change (different problem or discussion)
-- User explicitly changed focus
-- Previous capture in this session
-- Natural completion of unrelated work
+**Multiple captures in a session:** see [Conversation Boundary Detection](../references/conversation-boundary-detection.md#multiple-captures-in-session) for sequential, overlapping, and refinement cases.
 
-**Limits:**
-
-- **Minimum:** 10 messages
-- **Maximum:** 100 messages
-- **Typical:** 20-50 messages
-
-**Identify:**
-
-- What activity occurred?
-- What was learned or achieved?
-- When did this topic start?
-- Is this reusable knowledge?
-
-**Example:**
-
-```
-Messages 1-20: Fixed sass build error (DONE)
-Messages 21-50: Database design discussion
-Message 51: User triggers capture
-
-→ Scan 21-51, stop at message 20 (topic changed)
-→ Extract database design decision
-```
-
-**Multiple captures in session:**
-
-**Sequential (different topics):** Scan backward until previous capture boundary, extract new topic.
-
-**Overlapping (multiple types):** Ask user: "I see both a problem-solution and pattern. Capture both separately (recommended), one type only, or cancel?"
-
-**Refinement (recent capture):** If last capture within 10 messages, ask: "Create new capture, or edit previous in KB directly?"
-
-### Step 2: Detect Knowledge Type
+**Step 2 — Detect Knowledge Type:**
 
 **Solution (solutions/):**
 
@@ -78,9 +45,9 @@ Message 51: User triggers capture
 
 - Effective process identified, efficient approach found
 
-### Step 3: Extract Content
+**Step 3 — Extract Content:**
 
-#### For Solution
+For Solution:
 
 - **Problem:** What went wrong (one-line + details)
 - **Symptoms:** Error messages, unexpected behavior
@@ -89,7 +56,7 @@ Message 51: User triggers capture
 - **Solution:** Steps taken to fix
 - **Prevention:** How to avoid in future
 
-#### For Workflow
+For Workflow:
 
 - **Workflow:** Name/description
 - **Steps:** Sequence/process
@@ -97,18 +64,14 @@ Message 51: User triggers capture
 - **Benefits:** Why this works well
 - **Variations:** Alternative approaches
 
-### Step 4: Format Content
-
-Use templates from `references/` folder:
+**Step 4 — Format Content:** Use templates from `references/` folder:
 
 - `references/solution-template.md`
 - `references/workflow-template.md`
 
 Keep content self-contained - readable without conversation context.
 
-### Step 5: Confirm with User
-
-Present preview:
+**Step 5 — Confirm with User:** Present preview:
 
 ```
 I detected: [knowledge-type]
@@ -129,9 +92,7 @@ Options:
 
 **If "n":** Cancel and exit
 
-### Step 6: Write to Temp File
-
-Write formatted markdown to `/tmp/kb-capture-{timestamp}.md`.
+**Step 6 — Write to Temp File:** Write formatted markdown to `/tmp/kb-capture-{timestamp}.md`.
 
 **Frontmatter fields:**
 
@@ -140,9 +101,7 @@ Write formatted markdown to `/tmp/kb-capture-{timestamp}.md`.
 - `date` - YYYY-MM-DD format
 - Plus template fields (title, tags, etc.)
 
-### Step 7: Invoke Ingest
-
-Run `/neat-knowledge-ingest /tmp/kb-capture-{timestamp}.md`
+**Step 7 — Invoke Ingest:** Run `/neat-knowledge-ingest /tmp/kb-capture-{timestamp}.md`
 
 Ingest will:
 
@@ -152,11 +111,9 @@ Ingest will:
 - Generate metadata (title, summary, tags)
 - Save to captures/{type}/{filename}
 
-### Step 8: Clean Up
+**Step 8 — Clean Up:** Delete temp file after ingest completes.
 
-Delete temp file after ingest completes.
-
-### Step 9: Confirm to User
+**Step 9 — Confirm to User:**
 
 ```
 ✓ Knowledge captured!
@@ -167,6 +124,8 @@ Location: captures/{type}/{filename}
 Reuse: /neat-knowledge-ask {keywords}
 Consolidate: /neat-knowledge-rebuild (when 3+ similar)
 ```
+
+Done.
 
 ## Tips for Good Captures
 
