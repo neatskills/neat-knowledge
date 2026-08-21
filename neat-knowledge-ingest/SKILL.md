@@ -23,7 +23,7 @@ Run when adding new content — a web page, document, or directory of files — 
 
 ### Workspace
 
-- **`<self-path>`:** — canonical, symlink-free path of this skill's own directory; use for `references/` lookups.
+- `<self-path>`: canonical, symlink-free path of this skill's own directory; use for `references/` lookups.
 
 ## Prerequisites
 

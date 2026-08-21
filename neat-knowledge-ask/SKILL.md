@@ -21,7 +21,7 @@ Run when the user has an open-ended research question against the knowledge base
 
 ### Workspace
 
-- **`<self-path>`:** — canonical, symlink-free path of this skill's own directory; use for `references/` lookups.
+- `<self-path>`: canonical, symlink-free path of this skill's own directory; use for `references/` lookups.
 
 ## Phase 1: Progressive Loop
 
