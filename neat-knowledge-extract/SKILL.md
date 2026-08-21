@@ -19,6 +19,12 @@ Structured JSON extraction for automation. Agent-driven loading optimizes depth 
 
 Run when another skill or automation needs structured, machine-readable knowledge base content. Not for a human-readable answer — use `neat-knowledge-ask` for that. Not for a quick document lookup — use `neat-knowledge-search` for that.
 
+## Configuration
+
+### Workspace
+
+- **`<self-path>`** — canonical, symlink-free path of this skill's own directory; use for `references/` lookups.
+
 ## Phase 1: Algorithm
 
 **Step 1 — KB Detection:** Follow [KB Detection](../references/kb-detection.md). Error if missing/corrupt.

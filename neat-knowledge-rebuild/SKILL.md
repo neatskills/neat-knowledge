@@ -19,6 +19,12 @@ Comprehensive KB maintenance: optimizes categories via AI analysis, detects capt
 
 **Skip when:** Categories organized, KB <20 docs, just added 1-2 docs, captures <5 per topic, all captures recent (<3mo).
 
+## Configuration
+
+### Workspace
+
+- **`<self-path>`** — canonical, symlink-free path of this skill's own directory; use for `references/` lookups.
+
 ## Prerequisites
 
 KB with documents (regenerates .index/ if needed)

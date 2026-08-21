@@ -17,6 +17,12 @@ Interactive research with agent-driven progressive loading, multi-turn conversat
 
 Run when the user has an open-ended research question against the knowledge base that benefits from multi-turn exploration and synthesis. Not for a quick document lookup — use `neat-knowledge-search` for that. Not for structured automation output — use `neat-knowledge-extract` for that.
 
+## Configuration
+
+### Workspace
+
+- **`<self-path>`** — canonical, symlink-free path of this skill's own directory; use for `references/` lookups.
+
 ## Phase 1: Progressive Loop
 
 Initialize state: `turns: []`, `all_sources: []`, `contentCache: {}`

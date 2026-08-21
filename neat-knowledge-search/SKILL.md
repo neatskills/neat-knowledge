@@ -17,6 +17,12 @@ Fast keyword search returning metadata only (no content). Returns all matches wi
 
 Run when the user needs a fast keyword lookup against the knowledge base. Not for open-ended research needing synthesis — use `neat-knowledge-ask` for that. Not for structured automation output — use `neat-knowledge-extract` for that.
 
+## Configuration
+
+### Workspace
+
+- **`<self-path>`** — canonical, symlink-free path of this skill's own directory; use for `references/` lookups.
+
 ## Prerequisites
 
 - Knowledge base with `.index/index.json` and `.index/summaries/` structure

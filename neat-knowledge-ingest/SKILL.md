@@ -19,6 +19,12 @@ Converts web/PDF/Word/Excel/images/text to markdown with security checks and aut
 
 Run when adding new content — a web page, document, or directory of files — to the knowledge base. Not for retrieving existing KB content — use `neat-knowledge-search`, `neat-knowledge-ask`, or `neat-knowledge-extract` for that.
 
+## Configuration
+
+### Workspace
+
+- **`<self-path>`** — canonical, symlink-free path of this skill's own directory; use for `references/` lookups.
+
 ## Prerequisites
 
 Dependencies: mammoth, node-xlsx, @mozilla/readability, jsdom, turndown (run `npm install` if missing)

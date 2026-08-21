@@ -24,6 +24,12 @@ After solving problems, fixing bugs, or developing workflows.
 - One-off environmental issues
 - Temporary notes or task progress
 
+## Configuration
+
+### Workspace
+
+- **`<self-path>`** — canonical, symlink-free path of this skill's own directory; use for `references/` lookups.
+
 ## Prerequisites
 
 - Knowledge base exists (KB Detection prompts if needed)
