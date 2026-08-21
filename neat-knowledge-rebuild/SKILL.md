@@ -23,7 +23,7 @@ Comprehensive KB maintenance: optimizes categories via AI analysis, detects capt
 
 ### Workspace
 
-- `<self-path>`: canonical, symlink-free path of this skill's own directory; use for `references/` lookups.
+- `<self-path>`: resolve this skill's own directory to canonical, symlink-free path.
 - `<output-path>`: `./knowledge`
 
 ## Prerequisites

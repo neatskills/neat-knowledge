@@ -23,7 +23,7 @@ Run when another skill or automation needs structured, machine-readable knowledg
 
 ### Workspace
 
-- `<self-path>`: canonical, symlink-free path of this skill's own directory; use for `references/` lookups.
+- `<self-path>`: resolve this skill's own directory to canonical, symlink-free path.
 - `<output-path>`: `./knowledge`
 
 ## Phase 1: Algorithm
