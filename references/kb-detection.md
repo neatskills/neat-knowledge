@@ -1,10 +1,6 @@
 # KB Detection
 
-Ask user for KB location:
-
-```
-Enter knowledge base path (e.g., ./knowledge/ or ./docs/kb/):
-```
+Use `./knowledge` as the KB path. Store as `KB_PATH`.
 
 **If path exists and contains `.index/index.json`:**
 
@@ -13,8 +9,6 @@ Load existing KB. Show confirmation:
 ```
 Using existing KB at {path} ({count} documents)
 ```
-
-Store path as `KB_PATH`.
 
 **If path does not exist or missing `.index/` structure:**
 

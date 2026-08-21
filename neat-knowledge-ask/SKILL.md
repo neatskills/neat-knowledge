@@ -22,6 +22,7 @@ Run when the user has an open-ended research question against the knowledge base
 ### Workspace
 
 - `<self-path>`: canonical, symlink-free path of this skill's own directory; use for `references/` lookups.
+- Working space: `./knowledge`
 
 ## Phase 1: Progressive Loop
 
@@ -64,7 +65,7 @@ If any broken links were skipped: Append "\n\nNote: Some referenced sources were
 
 **Step 8 — Continue:** Ask "Continue? (y/n or follow-up)"
 
-- `n`: If 3+ turns, offer save to `docs/knowledge/conversations/{timestamp}.md`. Exit.
+- `n`: If 3+ turns, offer save to `./knowledge/conversations/{timestamp}.md`. Exit.
 - `y`: Ask next question, go to Step 2
 - Other: Treat as follow-up, go to Step 2
 
