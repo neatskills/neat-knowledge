@@ -22,7 +22,7 @@ Run when the user needs a fast keyword lookup against the knowledge base. Not fo
 ### Workspace
 
 - `<self-path>`: canonical, symlink-free path of this skill's own directory; use for `references/` lookups.
-- Working space: `./knowledge`
+- `<output-path>`: `./knowledge`
 
 ## Prerequisites
 

@@ -29,7 +29,7 @@ After solving problems, fixing bugs, or developing workflows.
 ### Workspace
 
 - `<self-path>`: canonical, symlink-free path of this skill's own directory; use for `references/` lookups.
-- Working space: `./knowledge`
+- `<output-path>`: `./knowledge`
 
 ## Prerequisites
 
