@@ -23,7 +23,6 @@ Run when adding new content — a web page, document, or directory of files — 
 
 ### Workspace
 
-- `<self-path>`: resolve this skill's own directory to canonical, symlink-free path.
 - `<output-path>`: `./knowledge`
 
 ## Prerequisites

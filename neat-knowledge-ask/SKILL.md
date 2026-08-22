@@ -21,7 +21,6 @@ Run when the user has an open-ended research question against the knowledge base
 
 ### Workspace
 
-- `<self-path>`: resolve this skill's own directory to canonical, symlink-free path.
 - `<output-path>`: `./knowledge`
 
 ## Phase 1: Progressive Loop

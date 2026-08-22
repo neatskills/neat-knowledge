@@ -28,7 +28,6 @@ After solving problems, fixing bugs, or developing workflows.
 
 ### Workspace
 
-- `<self-path>`: resolve this skill's own directory to canonical, symlink-free path.
 - `<output-path>`: `./knowledge`
 
 ## Prerequisites

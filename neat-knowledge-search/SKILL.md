@@ -21,7 +21,6 @@ Run when the user needs a fast keyword lookup against the knowledge base. Not fo
 
 ### Workspace
 
-- `<self-path>`: resolve this skill's own directory to canonical, symlink-free path.
 - `<output-path>`: `./knowledge`
 
 ## Prerequisites
